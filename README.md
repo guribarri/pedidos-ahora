@@ -10,7 +10,7 @@ Luego cada vez que quieran trabajar en el codigo para levantar la API y base de 
 
 Guía rápida para arrancar el proyecto:
 
-    Levantar todo: docker compose up (Agreguen --build si hay cambios en las librerías o el Dockerfile).
+    Levantar todo: docker compose up -d (Agreguen --build si hay cambios en las librerías o el Dockerfile).
 
     Bajar los servicios: docker compose down (Esto apaga los contenedores y libera la memoria).
 
