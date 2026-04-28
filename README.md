@@ -14,4 +14,6 @@ Guía rápida para arrancar el proyecto:
 
     Bajar los servicios: docker compose down (Esto apaga los contenedores y libera la memoria).
 
+    ...
+
 **TIENEN QUE ESTAR PARADOS EN /pedidos-ahora para poder ejecutar estos comandos**
