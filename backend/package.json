@@ -12,7 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "express": "^5.2.1",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "yup": "^1.7.1"
   },
   "devDependencies": {
     "jest": "^30.3.0"
