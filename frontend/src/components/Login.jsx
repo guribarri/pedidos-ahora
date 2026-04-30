@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Login = () => {
+const Login = ({ onLoginExitoso }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -28,15 +28,21 @@ const Login = () => {
 
     // Simular envío al backend
     console.log('Datos de login:', formData);
-    alert(`¡Ingreso exitoso con: ${formData.email}`);
+    
+    // Llamar a la función de login exitoso
+    if (onLoginExitoso) {
+      onLoginExitoso();
+    }
 
     // Limpiar formulario
     setFormData({ email: '', password: '' });
   };
 
   return (
-    <div style={styles.container}>
-      <h2>Iniciar Sesión</h2>
+    <div style={styles.mainContainer}>
+      <h1 style={styles.title}>Pedidos Ahora</h1>
+      <div style={styles.container}>
+        <h2>Iniciar Sesión</h2>
       
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formGroup}>
@@ -70,14 +76,27 @@ const Login = () => {
         {error && <p style={styles.error}>{error}</p>}
 
         <button type="submit" style={styles.button}>
-          Login
+          Ingresar
         </button>
       </form>
+      </div>
     </div>
   );
 };
 
 const styles = {
+  mainContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+  },
+  title: {
+    fontSize: '36px',
+    marginBottom: '40px',
+    textAlign: 'center',
+  },
   container: {
     maxWidth: '400px',
     margin: '0 auto',
