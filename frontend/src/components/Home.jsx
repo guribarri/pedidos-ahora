@@ -1,10 +1,15 @@
 import React from 'react';
 
-const Home = ({ onLogout }) => {
+const Home = ({ usuario, onLogout }) => {
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>Bienvenido a Pedidos Ahora</h1>
       <p style={styles.subtitle}>Has iniciado sesión correctamente</p>
+      {usuario && (
+        <p style={styles.userEmail}>
+          <strong>Email:</strong> {usuario.email}
+        </p>
+      )}
       <button onClick={onLogout} style={styles.button}>
         Cerrar Sesión
       </button>
@@ -28,6 +33,11 @@ const styles = {
   subtitle: {
     fontSize: '16px',
     color: '#666',
+    marginBottom: '20px',
+  },
+  userEmail: {
+    fontSize: '14px',
+    color: '#333',
     marginBottom: '30px',
   },
   button: {

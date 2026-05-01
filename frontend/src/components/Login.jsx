@@ -7,6 +7,7 @@ const Login = ({ onLoginExitoso }) => {
   });
 
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,7 +18,7 @@ const Login = ({ onLoginExitoso }) => {
     setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validación simple
@@ -26,16 +27,42 @@ const Login = ({ onLoginExitoso }) => {
       return;
     }
 
-    // Simular envío al backend
-    console.log('Datos de login:', formData);
-    
-    // Llamar a la función de login exitoso
-    if (onLoginExitoso) {
-      onLoginExitoso();
-    }
+    setLoading(true);
 
-    // Limpiar formulario
-    setFormData({ email: '', password: '' });
+    try {
+      const response = await fetch('http://localhost:4000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Login exitoso:', data);
+        
+        // Guardar usuario en localStorage (opcional)
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Limpiar formulario
+        setFormData({ email: '', password: '' });
+        setError('');
+        
+        // Llamar a la función de login exitoso
+        if (onLoginExitoso) {
+          onLoginExitoso();
+        }
+      } else {
+        // Si falla, mostrar mensaje de error
+        setError('Usuario o contraseña incorrecto');
+      }
+    } catch (err) {
+      console.error('Error en login:', err);
+      setError('Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,8 +102,16 @@ const Login = ({ onLoginExitoso }) => {
 
         {error && <p style={styles.error}>{error}</p>}
 
-        <button type="submit" style={styles.button}>
-          Ingresar
+        <button 
+          type="submit" 
+          style={{
+            ...styles.button,
+            opacity: loading ? 0.6 : 1,
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+          disabled={loading}
+        >
+          {loading ? 'Cargando...' : 'Login'}
         </button>
       </form>
       </div>
