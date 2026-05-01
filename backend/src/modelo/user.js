@@ -6,6 +6,6 @@ class User {
 }
 
 // Hardcoded user instance
-const hardcodedUser = new User("admin@example.com", "securepassword123");
+const hardcodedUser = new User("admin@pedidiosahora.com", "password123");
 
 module.exports = { User, hardcodedUser };
