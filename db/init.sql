@@ -17,3 +17,7 @@ CREATE TABLE menus (
     descripcion TEXT,
     precio DECIMAL(10, 2) NOT NULL
 );
+
+-- Insertar usuario admin
+INSERT INTO users (email, password)
+VALUES ('admin@pedidiosahora.com', 'password123');
