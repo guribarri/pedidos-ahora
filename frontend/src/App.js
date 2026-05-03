@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Login from './components/Login';
 import Home from './components/Home';
+import MenuForm from './components/MenuForm';
 
 const App = () => {
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
@@ -21,13 +22,7 @@ const App = () => {
   };
 
   return (
-    <div style={{ fontFamily: 'sans-serif' }}>
-      {usuarioAutenticado ? (
-        <Home usuario={usuario} onLogout={handleLogout} />
-      ) : (
-        <Login onLoginExitoso={handleLoginExitoso} />
-      )}
-    </div>
+    <MenuForm />
   );
 };
 

@@ -1,19 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './MenuForm.css';
+import MenuService from '../services/MenuService';
 
 const MenuForm = () => {
     const [nombre, setNombre] = useState('');
     const [descripcion, setDescripcion] = useState('');
     const [precio, setPrecio] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setLoading(true);
         console.log('Form data submitted:', { nombre, descripcion, precio });
-        // falta funcionalidad con api
+        MenuService.createMenu(nombre, descripcion, precio)
+            .then((data) => {
+                console.log('Menu created:', data);
+                // Reset form fields
+                setNombre('');
+                setDescripcion('');
+                setPrecio('');
+                //ir al home
+            })
+            .catch((error) => {
+                console.error('Error creating menu:', error);
+                setError(error.message);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     };
 
     return (
         <div className="menu-form-container">
+            {error && (
+                <div className="error-modal">
+                    {error}
+                </div>
+            )}
             <form className="menu-form" onSubmit={handleSubmit}>
                 <h2>Agregar Nuevo Menú</h2>
                 <div className="form-group">
@@ -45,7 +76,9 @@ const MenuForm = () => {
                         onChange={(e) => setPrecio(e.target.value)}
                     />
                 </div>
-                <button type="submit">Agregar</button>
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Agregando...' : 'Agregar'}
+                </button>
             </form>
         </div>
     );
