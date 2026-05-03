@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import './MenuForm.css';
 import MenuService from '../services/MenuService';
+import { useUserContext } from '../hooks/useUserContext';
+import { useNavigate } from 'react-router-dom';
 
 const MenuForm = () => {
     const [nombre, setNombre] = useState('');
     const [descripcion, setDescripcion] = useState('');
     const [precio, setPrecio] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loadingForm, setLoadingForm] = useState(false);
     const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(false);
+    const { usuario, loading } = useUserContext();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (error) {
@@ -16,33 +21,48 @@ const MenuForm = () => {
         }
     }, [error]);
 
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => {
+                setSuccess(false);
+                navigate('/');
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [success, navigate]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
-        console.log('Form data submitted:', { nombre, descripcion, precio });
-        MenuService.createMenu(nombre, descripcion, precio)
+        setLoadingForm(true);
+        const precioNumerico = precio === '' ? undefined : Number(precio);
+        console.log('Form data submitted:', { nombre, descripcion, precio: precioNumerico, email: usuario.email });
+        MenuService.createMenu(nombre, descripcion, precioNumerico, usuario.email)
             .then((data) => {
                 console.log('Menu created:', data);
-                // Reset form fields
-                setNombre('');
-                setDescripcion('');
-                setPrecio('');
-                //ir al home
+                setSuccess(true);
             })
             .catch((error) => {
                 console.error('Error creating menu:', error);
                 setError(error.message);
             })
             .finally(() => {
-                setLoading(false);
+                setLoadingForm(false);
             });
     };
+
+    if (loading) return <div className="menu-form-container">Cargando sesión...</div>;
+    if (!usuario) return <div className="menu-form-container">No hay sesión activa</div>;
 
     return (
         <div className="menu-form-container">
             {error && (
                 <div className="error-modal">
                     {error}
+                </div>
+            )}
+            {success && (
+                <div className="success-modal">
+                    Menú registrado con éxito
                 </div>
             )}
             <form className="menu-form" onSubmit={handleSubmit}>
@@ -76,8 +96,8 @@ const MenuForm = () => {
                         onChange={(e) => setPrecio(e.target.value)}
                     />
                 </div>
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Agregando...' : 'Agregar'}
+                <button type="submit" disabled={loadingForm}>
+                    {loadingForm ? 'Agregando...' : 'Agregar'}
                 </button>
             </form>
         </div>
