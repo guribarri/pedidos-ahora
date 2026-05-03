@@ -1,6 +1,11 @@
 import React from 'react';
+import { useUserContext } from '../hooks/useUserContext';
+import { useNavigate } from 'react-router-dom';
 
-const Home = ({ usuario, onLogout }) => {
+const Home = ({ onLogout }) => {
+  const { usuario } = useUserContext();
+  const navigate = useNavigate();
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>Bienvenido a Pedidos Ahora</h1>
@@ -12,6 +17,12 @@ const Home = ({ usuario, onLogout }) => {
       )}
       <button onClick={onLogout} style={styles.button}>
         Cerrar Sesión
+      </button>
+      <button
+        onClick={() => navigate('/menu-form')}
+        style={{ ...styles.button, marginTop: '20px', backgroundColor: '#007bff' }}
+      >
+        Ir al Formulario de Menú
       </button>
     </div>
   );
