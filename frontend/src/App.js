@@ -26,7 +26,7 @@ function AppRoutes() {
     };
 
     if (loading) {
-        return <div style={{padding:20}}>Cargando...</div>;
+        return <div style={{ padding: 20 }}>Cargando...</div>;
     }
 
     return (
@@ -42,7 +42,7 @@ function AppRoutes() {
                 />
                 <Route
                     path="/menu-form"
-                    element={usuarioAutenticado ? <MenuForm /> : <Navigate to="/login" />}
+                    element={usuarioAutenticado ? <MenuForm onLogout={handleLogout} /> : <Navigate to="/login" />}
                 />
             </Routes>
         </BrowserRouter>
