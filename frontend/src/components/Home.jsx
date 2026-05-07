@@ -55,7 +55,7 @@ const Home = ({ onLogout }) => {
             <p style={styles.subtitle}>Gestiona tus pedidos y menús desde un solo lugar.</p>
             <div style={styles.divider} />
           <section style={styles.listWrapper}>
-              <h2 style={styles.sectionTitle}>Menús cargados</h2>
+              <h2 style={styles.sectionTitle}>Menúes cargados</h2>
 
                 {loading ? (
                   <p>Cargando...</p>
@@ -71,8 +71,22 @@ const Home = ({ onLogout }) => {
                       <p style={styles.cardDesc}>{m.descripcion}</p>
                       <div style={styles.cardFooter}>
                         <div>
-                          <button style={styles.actionBtn} onClick={() => handleEdit(m.id)}>Editar</button>
-                          <button style={{...styles.actionBtn, ...styles.dangerBtn}} onClick={() => handleDelete(m.id)}>Borrar</button>
+                          <button
+                            style={styles.actionBtn}
+                            onClick={() => handleEdit(m.id)}
+                            aria-label="Editar"
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            style={{...styles.actionBtn, ...styles.dangerBtn}}
+                            onClick={() => handleDelete(m.id)}
+                            aria-label="Borrar"
+                            title="Borrar"
+                          >
+                            🗑️
+                          </button>
                         </div>
                         <div>
                           <button style={styles.hideBtn} onClick={() => handleToggle(m.id, m.visible)}>
