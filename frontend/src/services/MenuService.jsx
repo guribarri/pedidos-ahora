@@ -13,4 +13,35 @@ const createMenu = async (nombre, descripcion, precio, userEmail) => {
     }
 };
 
-export default { createMenu };
+const getAllMenus = async (all = false) => {
+    try {
+        const url = all ? `${baseURL}menus?all=true` : `${baseURL}menus`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching menus:', error);
+        throw Error("Hubo un error al obtener los menús");
+    }
+};
+
+const deleteMenu = async (id, userEmail) => {
+    try {
+        const response = await axios.delete(`${baseURL}menus/${id}`, { headers: { 'x-user-email': userEmail } });
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting menu:', error);
+        throw Error('Error al eliminar el menú');
+    }
+};
+
+const toggleVisibility = async (id, visible, userEmail) => {
+    try {
+        const response = await axios.patch(`${baseURL}menus/${id}/visibility`, { visible }, { headers: { 'x-user-email': userEmail } });
+        return response.data;
+    } catch (error) {
+        console.error('Error toggling visibility:', error);
+        throw Error('Error al actualizar la visibilidad');
+    }
+};
+
+export default { createMenu, getAllMenus, deleteMenu, toggleVisibility };

@@ -15,7 +15,8 @@ CREATE TABLE menus (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(255) NOT NULL,
     descripcion TEXT,
-    precio DECIMAL(10, 2) NOT NULL
+    precio DECIMAL(10, 2) NOT NULL,
+    visible BOOLEAN DEFAULT true
 );
 
 -- Insertar usuario admin

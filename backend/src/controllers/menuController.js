@@ -4,7 +4,11 @@ class MenuController {
   // GET todos los menús
   async getAll(req, res) {
     try {
-      const result = await pool.query("SELECT * FROM menus ORDER BY id ASC");
+      // Si query param all=true retornamos todos (uso admin),
+      // de lo contrario solo mostramos visibles para la vista pública
+      const all = req.query.all === 'true';
+      const sql = all ? "SELECT * FROM menus ORDER BY id ASC" : "SELECT * FROM menus WHERE visible = true ORDER BY id ASC";
+      const result = await pool.query(sql);
       res.json(result.rows);
     } catch (err) {
       console.error(err);
@@ -104,6 +108,29 @@ class MenuController {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Error al eliminar menú" });
+    }
+  }
+
+  // PATCH alternar visibilidad (solo admin)
+  async toggleVisibility(req, res) {
+    try {
+      const { id } = req.params;
+      const { visible } = req.body;
+
+      const existing = await pool.query("SELECT * FROM menus WHERE id = $1", [id]);
+      if (existing.rows.length === 0) {
+        return res.status(404).json({ error: "Menú no encontrado" });
+      }
+
+      const result = await pool.query(
+        "UPDATE menus SET visible = $1 WHERE id = $2 RETURNING *",
+        [visible === true || visible === 'true', id]
+      );
+
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error al actualizar visibilidad" });
     }
   }
 }

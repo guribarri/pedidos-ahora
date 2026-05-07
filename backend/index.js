@@ -39,6 +39,9 @@ app.put("/menus/:id", isAdmin, menuController.update.bind(menuController));
 // DELETE eliminar menú (solo admin)
 app.delete("/menus/:id", isAdmin, menuController.delete.bind(menuController));
 
+// PATCH alternar visibilidad (solo admin)
+app.patch("/menus/:id/visibility", isAdmin, menuController.toggleVisibility.bind(menuController));
+
 app.listen(3000, () => {
   console.log('Servidor corriendo en puerto 3000');
 });
