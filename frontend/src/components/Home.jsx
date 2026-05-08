@@ -9,6 +9,9 @@ const Home = ({ onLogout }) => {
   const navigate = useNavigate();
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMenuId, setModalMenuId] = useState(null);
+  const [modalMenuName, setModalMenuName] = useState('');
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   const loadMenus = async () => {
@@ -36,7 +39,10 @@ const Home = ({ onLogout }) => {
   }, []);
 
   const handleDelete = (id) => {
-    window.alert('Funcionalidad temporalmente no disponible.');
+    const m = menus.find((x) => x.id === id);
+    setModalMenuId(id);
+    setModalMenuName(m ? m.nombre : 'estemenu');
+    setModalOpen(true);
   };
 
   const handleToggle = (id, currentVisible) => {
@@ -104,6 +110,18 @@ const Home = ({ onLogout }) => {
           
         </main>
       </div>
+      {modalOpen && (
+        <div style={modalStyles.overlay}>
+          <div style={modalStyles.modal} role="dialog" aria-modal="true">
+            <h3 style={{marginTop:0}}>Borrar Menú</h3>
+            <p>¿Desea eliminar el menú "{modalMenuName}"?</p>
+            <div style={{display:'flex', justifyContent:'flex-end', gap:8, marginTop:12}}>
+              <button style={styles.hideBtn} onClick={() => setModalOpen(false)}>Cancelar</button>
+              <button style={{...styles.actionBtn, ...styles.dangerBtnBorrarMenu}} onClick={() => { window.alert('no implementado'); setModalOpen(false); }}>Aceptar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
@@ -276,6 +294,9 @@ const styles = {
   dangerBtn: {
     backgroundColor: '#ff6b6b',
   },
+  dangerBtnBorrarMenu: {
+    backgroundColor: '#1cbd2a',
+  },
   hideBtn: {
     backgroundColor: '#f1f2f6',
     color: '#333',
@@ -284,6 +305,26 @@ const styles = {
     borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '13px',
+  },
+};
+
+const modalStyles = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  },
+  modal: {
+    backgroundColor: 'white',
+    padding: '18px 20px',
+    borderRadius: '10px',
+    maxWidth: '420px',
+    width: '90%',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
   },
 };
 
