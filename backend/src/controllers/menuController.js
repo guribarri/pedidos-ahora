@@ -2,12 +2,9 @@ const pool = require("../db");
 
 class MenuController {
   // GET todos los menús
-  async getAll(req, res) {
+  async getAll(res) {
     try {
-      // Si query param all=true retornamos todos (uso admin),
-      // de lo contrario solo mostramos visibles para la vista pública
-      const all = req.query.all === 'true';
-      const sql = all ? "SELECT * FROM menus ORDER BY id ASC" : "SELECT * FROM menus WHERE visible = true ORDER BY id ASC";
+      const sql = "SELECT * FROM menus ORDER BY id ASC";
       const result = await pool.query(sql);
       res.json(result.rows);
     } catch (err) {
@@ -103,7 +100,7 @@ class MenuController {
         return res.status(404).json({ error: "Menú no encontrado" });
       }
 
-      await pool.query("DELETE FROM menus WHERE id = $1", [id]);
+      await pool.query("UPDATE menus SET visible = false WHERE id = $1", [id]);
       res.json({ message: "Menú eliminado correctamente" });
     } catch (err) {
       console.error(err);

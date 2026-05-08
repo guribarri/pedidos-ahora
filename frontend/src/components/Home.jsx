@@ -16,8 +16,7 @@ const Home = ({ onLogout }) => {
 
   const loadMenus = async () => {
     try {
-      const isAdmin = usuario?.email === 'admin@pedidiosahora.com';
-      const data = await MenuService.getAllMenus(isAdmin);
+      const data = await MenuService.getAllMenus();
       setMenus(data || []);
     } catch (e) {
       console.error(e);
@@ -43,6 +42,12 @@ const Home = ({ onLogout }) => {
     setModalMenuId(id);
     setModalMenuName(m ? m.nombre : 'estemenu');
     setModalOpen(true);
+  };
+
+const handleConfirmDelete = (id) => { 
+    MenuService.deleteMenu(id, usuario.email)
+      .then(() => loadMenus())
+      .catch((err) => window.alert(err.message));
   };
 
   const handleToggle = (id, currentVisible) => {
@@ -117,7 +122,10 @@ const Home = ({ onLogout }) => {
             <p>¿Desea eliminar el menú "{modalMenuName}"?</p>
             <div style={{display:'flex', justifyContent:'flex-end', gap:8, marginTop:12}}>
               <button style={styles.hideBtn} onClick={() => setModalOpen(false)}>Cancelar</button>
-              <button style={{...styles.actionBtn, ...styles.dangerBtnBorrarMenu}} onClick={() => { window.alert('no implementado'); setModalOpen(false); }}>Aceptar</button>
+              <button style={{...styles.actionBtn, ...styles.dangerBtnBorrarMenu}} 
+                      onClick={() => { handleConfirmDelete(modalMenuId); setModalOpen(false); }}>
+                      Aceptar
+              </button>
             </div>
           </div>
         </div>
