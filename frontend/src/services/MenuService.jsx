@@ -13,10 +13,9 @@ const createMenu = async (nombre, descripcion, precio, userEmail) => {
     }
 };
 
-const getAllMenus = async (all = false) => {
+const getAllMenus = async () => {
     try {
-        const url = all ? `${baseURL}menus?all=true` : `${baseURL}menus`;
-        const response = await axios.get(url);
+        const response = await axios.get(`${baseURL}menus`);
         return response.data;
     } catch (error) {
         console.error('Error fetching menus:', error);
