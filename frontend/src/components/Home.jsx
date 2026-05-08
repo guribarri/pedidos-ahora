@@ -99,11 +99,7 @@ const handleConfirmDelete = (id) => {
                             🗑️
                           </button>
                         </div>
-                        <div>
-                          <button style={styles.hideBtn} onClick={() => handleToggle(m.id, m.visible)}>
-                            {m.visible === false ? 'Mostrar' : 'Ocultar'}
-                          </button>
-                        </div>
+                        
                       </div>
                     </article>
                   ))}
