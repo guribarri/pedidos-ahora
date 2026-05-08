@@ -2,9 +2,9 @@ const pool = require("../db");
 
 class MenuController {
   // GET todos los menús
-  async getAll(res) {
+  async getAll(req, res) {
     try {
-      const sql = "SELECT * FROM menus ORDER BY id ASC";
+      const sql = "SELECT * FROM menus ORDER BY id DESC";
       const result = await pool.query(sql);
       res.json(result.rows);
     } catch (err) {
