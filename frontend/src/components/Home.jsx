@@ -72,7 +72,7 @@ const handleConfirmDelete = (id) => {
                   <p>Cargando...</p>
                 ) : (
                 <div style={{ ...styles.cardGrid, gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(420px, 1fr))' : 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-                  {menus.length === 0 && <p>No hay menús.</p>}
+                  {menus.length === 0 && <p>No hay menúes cargados, agregue, por favor.</p>}
                   {menus.map((m) => (
                     <article key={m.id} style={styles.card}>
                       <div style={styles.cardHeader}>
