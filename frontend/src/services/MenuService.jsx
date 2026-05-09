@@ -33,6 +33,15 @@ const deleteMenu = async (id, userEmail) => {
     }
 };
 
+const updateMenu = async (id, nombre, descripcion, precio, userEmail) => {
+    try {
+        const response = await axios.put(`${baseURL}menus/${id}`, { nombre, descripcion, precio }, { headers: { 'x-user-email': userEmail } });
+        return response.data;
+    } catch (error) {
+        throw Error("Hubo un error al actualizar el menú");
+    }
+};
+
 const toggleVisibility = async (id, visible, userEmail) => {
     try {
         const response = await axios.patch(`${baseURL}menus/${id}/visibility`, { visible }, { headers: { 'x-user-email': userEmail } });
@@ -43,4 +52,4 @@ const toggleVisibility = async (id, visible, userEmail) => {
     }
 };
 
-export default { createMenu, getAllMenus, deleteMenu, toggleVisibility };
+export default { createMenu, getAllMenus, deleteMenu, toggleVisibility, updateMenu };

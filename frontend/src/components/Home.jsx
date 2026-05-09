@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from './Layout.jsx';
 import { useEffect, useState } from 'react';
 import MenuService from '../services/MenuService.jsx';
+import MenuForm from './MenuForm.jsx';
 
 const Home = ({ onLogout }) => {
   const { usuario } = useUserContext();
@@ -13,6 +14,8 @@ const Home = ({ onLogout }) => {
   const [modalMenuId, setModalMenuId] = useState(null);
   const [modalMenuName, setModalMenuName] = useState('');
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [menuToEdit, setMenuToEdit] = useState(null);
 
   const loadMenus = async () => {
     try {
@@ -44,7 +47,7 @@ const Home = ({ onLogout }) => {
     setModalOpen(true);
   };
 
-const handleConfirmDelete = (id) => { 
+  const handleConfirmDelete = (id) => {
     MenuService.deleteMenu(id, usuario.email)
       .then(() => loadMenus())
       .catch((err) => window.alert(err.message));
@@ -55,7 +58,9 @@ const handleConfirmDelete = (id) => {
   };
 
   const handleEdit = (id) => {
-    window.alert('Funcionalidad temporalmente no disponible.');
+    const m = menus.find((x) => x.id === id);
+    setMenuToEdit(m);
+    setEditModalOpen(true);
   };
 
   return (
@@ -63,66 +68,81 @@ const handleConfirmDelete = (id) => {
       <div style={styles.page}>
         <main style={styles.mainContent}>
           <h1 style={styles.title}>¡Bienvenido de nuevo!</h1>
-            <p style={styles.subtitle}>Gestiona tus pedidos y menús desde un solo lugar.</p>
-            <div style={styles.divider} />
+          <p style={styles.subtitle}>Gestiona tus pedidos y menús desde un solo lugar.</p>
+          <div style={styles.divider} />
           <section style={styles.listWrapper}>
-              <h2 style={styles.sectionTitle}>Menúes cargados</h2>
+            <h2 style={styles.sectionTitle}>Menúes cargados</h2>
 
-                {loading ? (
-                  <p>Cargando...</p>
-                ) : (
-                <div style={{ ...styles.cardGrid, gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(420px, 1fr))' : 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-                  {menus.length === 0 && <p>No hay menúes cargados, agregue, por favor.</p>}
-                  {menus.map((m) => (
-                    <article key={m.id} style={styles.card}>
-                      <div style={styles.cardHeader}>
-                        <h3 style={styles.cardTitle}>{m.nombre}</h3>
-                        <span style={styles.price}>${Number(m.precio).toFixed(2)}</span>
+            {loading ? (
+              <p>Cargando...</p>
+            ) : (
+              <div style={{ ...styles.cardGrid, gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(420px, 1fr))' : 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+                {menus.length === 0 && <p>No hay menúes cargados, agregue, por favor.</p>}
+                {menus.map((m) => (
+                  <article key={m.id} style={styles.card}>
+                    <div style={styles.cardHeader}>
+                      <h3 style={styles.cardTitle}>{m.nombre}</h3>
+                      <span style={styles.price}>${Number(m.precio).toFixed(2)}</span>
+                    </div>
+                    <p style={styles.cardDesc}>{m.descripcion}</p>
+                    <div style={styles.cardFooter}>
+                      <div>
+                        <button
+                          style={styles.actionBtn}
+                          onClick={() => handleEdit(m.id)}
+                          aria-label="Editar"
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          style={{ ...styles.actionBtn, ...styles.dangerBtn }}
+                          onClick={() => handleDelete(m.id)}
+                          aria-label="Borrar"
+                          title="Borrar"
+                        >
+                          🗑️
+                        </button>
                       </div>
-                      <p style={styles.cardDesc}>{m.descripcion}</p>
-                      <div style={styles.cardFooter}>
-                        <div>
-                          <button
-                            style={styles.actionBtn}
-                            onClick={() => handleEdit(m.id)}
-                            aria-label="Editar"
-                            title="Editar"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            style={{...styles.actionBtn, ...styles.dangerBtn}}
-                            onClick={() => handleDelete(m.id)}
-                            aria-label="Borrar"
-                            title="Borrar"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                        
-                      </div>
-                    </article>
-                  ))}
-                </div>
-                )}
-            </section>
+
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
 
-          
+
         </main>
       </div>
       {modalOpen && (
         <div style={modalStyles.overlay}>
           <div style={modalStyles.modal} role="dialog" aria-modal="true">
-            <h3 style={{marginTop:0}}>Borrar Menú</h3>
+            <h3 style={{ marginTop: 0 }}>Borrar Menú</h3>
             <p>¿Desea eliminar el menú "{modalMenuName}"?</p>
-            <div style={{display:'flex', justifyContent:'flex-end', gap:8, marginTop:12}}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
               <button style={styles.hideBtn} onClick={() => setModalOpen(false)}>Cancelar</button>
-              <button style={{...styles.actionBtn, ...styles.dangerBtnBorrarMenu}} 
-                      onClick={() => { handleConfirmDelete(modalMenuId); setModalOpen(false); }}>
-                      Aceptar
+              <button style={{ ...styles.actionBtn, ...styles.dangerBtnBorrarMenu }}
+                onClick={() => { handleConfirmDelete(modalMenuId); setModalOpen(false); }}>
+                Aceptar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {editModalOpen && (
+        <div style={modalStyles.overlay}>
+          <div style={{ ...modalStyles.modal, maxWidth: '500px' }}> {/* Un poco más ancho para el form */}
+            <MenuForm
+              isModal={true}
+              initialData={menuToEdit}
+              onSuccess={() => {
+                setEditModalOpen(false);
+                loadMenus();
+              }}
+              onCancel={() => setEditModalOpen(false)}
+            />
           </div>
         </div>
       )}
