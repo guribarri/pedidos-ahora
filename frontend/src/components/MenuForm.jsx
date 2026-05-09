@@ -13,6 +13,7 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
     const [success, setSuccess] = useState(false);
     const { usuario, loading } = useUserContext();
     const navigate = useNavigate();
+    const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
         if (initialData) {
@@ -23,6 +24,19 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
     }, [initialData]);
 
     useEffect(() => {
+        if (initialData) {
+            const isChanged =
+                nombre !== (initialData.nombre || '') ||
+                descripcion !== (initialData.descripcion || '') ||
+                Number(precio) !== Number(initialData.precio);
+
+            setHasChanges(isChanged);
+        } else {
+            setHasChanges(nombre.length > 0);
+        }
+    }, [nombre, descripcion, precio, initialData]);
+
+    useEffect(() => {
         if (error || success) {
             const timer = setTimeout(() => {
                 setError(null);
@@ -31,7 +45,7 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
                     if (onSuccess) onSuccess();
                     if (!isModal) navigate('/');
                 }
-            }, 2000);
+            }, 800);
             return () => clearTimeout(timer);
         }
     }, [error, success, navigate, isModal, onSuccess]);
@@ -106,7 +120,17 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
                             Cancelar
                         </button>
                     )}
-                    <button type="submit" disabled={loadingForm} style={{ ...styles.mainBtn, flex: 2, marginTop: 0 }}>
+                    <button
+                        type="submit"
+                        disabled={loadingForm || !hasChanges}
+                        style={{
+                            ...styles.mainBtn,
+                            flex: 2,
+                            marginTop: 0,
+                            opacity: (loadingForm || !hasChanges) ? 0.6 : 1,
+                            cursor: (loadingForm || !hasChanges) ? 'not-allowed' : 'pointer'
+                        }}
+                    >
                         {loadingForm ? 'Cargando...' : (initialData ? 'Guardar Cambios' : 'Guardar Menú')}
                     </button>
                 </div>

@@ -4,7 +4,7 @@ class MenuController {
   // GET todos los menús
   async getAll(req, res) {
     try {
-      const sql = "SELECT * FROM menus ORDER BY id DESC";
+      const sql = "SELECT * FROM menus WHERE visible = true ORDER BY id DESC";
       const result = await pool.query(sql);
       res.json(result.rows);
     } catch (err) {
