@@ -13,6 +13,16 @@ const createMenu = async (nombre, descripcion, precio, userEmail) => {
     }
 };
 
+const editMenu = async(id, nombre, descripcion, precio, userEmail) => {
+    try {
+        const response = await axios.put(`${baseURL}menus/${id}`, { nombre, descripcion, precio }, { headers: { 'x-user-email': userEmail } });
+        return response.data;
+    } catch (error) {
+        console.error('Error editing menu:', error);
+        throw Error("Hubo un error al editar el menú, revise los campos ingresados");
+    };
+}
+
 const getAllMenus = async () => {
     try {
         const response = await axios.get(`${baseURL}menus`);
@@ -43,4 +53,4 @@ const toggleVisibility = async (id, visible, userEmail) => {
     }
 };
 
-export default { createMenu, getAllMenus, deleteMenu, toggleVisibility };
+export default { createMenu, getAllMenus, deleteMenu, toggleVisibility, editMenu };

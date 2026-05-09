@@ -1,6 +1,8 @@
 import { useUserContext } from '../hooks/useUserContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from './Layout.jsx';
+import Modal from './Modal.jsx';
+import MenuForm from './MenuForm.jsx';
 import { useEffect, useState } from 'react';
 import MenuService from '../services/MenuService.jsx';
 
@@ -12,6 +14,8 @@ const Home = ({ onLogout }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMenuId, setModalMenuId] = useState(null);
   const [modalMenuName, setModalMenuName] = useState('');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingMenu, setEditingMenu] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   const loadMenus = async () => {
@@ -55,7 +59,10 @@ const handleConfirmDelete = (id) => {
   };
 
   const handleEdit = (id) => {
-    window.alert('Funcionalidad temporalmente no disponible.');
+    const m = menus.find((x) => x.id === id);
+    if (!m) return;
+    setEditingMenu(m);
+    setEditModalOpen(true);
   };
 
   return (
@@ -125,6 +132,15 @@ const handleConfirmDelete = (id) => {
             </div>
           </div>
         </div>
+      )}
+      {editModalOpen && (
+        <Modal onClose={() => setEditModalOpen(false)} ariaLabel="Editar menú">
+          <MenuForm
+            initialData={editingMenu}
+            onClose={() => { setEditModalOpen(false); loadMenus(); }}
+            onLogout={onLogout}
+          />
+        </Modal>
       )}
     </Layout>
   );
