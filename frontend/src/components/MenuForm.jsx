@@ -44,14 +44,15 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
 
     useEffect(() => {
         if (error || success) {
+            const duration = error ? 4000 : 1200; // errores muestran más tiempo
             const timer = setTimeout(() => {
-                setError(null);
+                if (error) setError(null);
                 if (success) {
                     setSuccess(false);
                     if (onSuccess) onSuccess();
                     if (!isModal) navigate('/');
                 }
-            }, 800);
+            }, duration);
             return () => clearTimeout(timer);
         }
     }, [error, success, navigate, isModal, onSuccess]);
@@ -65,18 +66,24 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
 
         if (!isFormValid) {
             setError("Por favor, completá todos los campos correctamente.");
+            setLoadingForm(false);
             return;
         }
-        setLoadingForm(true);
         if (initialData && initialData.id) {
             MenuService.updateMenu(initialData.id, nombre, descripcion, precioNumerico, usuario.email)
                 .then(() => setSuccess(true))
-                .catch((err) => setError(err.message))
+                .catch((err) => {
+                    const serverMsg = err?.response?.data?.error || err?.message || 'Hubo un error al actualizar el menú';
+                    setError(serverMsg);
+                })
                 .finally(() => setLoadingForm(false));
         } else {
             MenuService.createMenu(cleanNombre, cleanDesc, precioNumerico, usuario.email)
                 .then(() => setSuccess(true))
-                .catch((err) => setError(err.message))
+                .catch((err) => {
+                    const serverMsg = err?.response?.data?.error || err?.message || 'Hubo un error al crear el menú';
+                    setError(serverMsg);
+                })
                 .finally(() => setLoadingForm(false));
         }
     };

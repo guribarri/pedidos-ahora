@@ -52,6 +52,10 @@ class MenuController {
       res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error(err);
+      // Postgres unique violation
+      if (err && err.code === '23505') {
+        return res.status(400).json({ error: "El menu " + req.body.nombre + " ya esiste" });
+      }
       res.status(500).json({ error: "Error al crear menú" });
     }
   }
@@ -85,6 +89,10 @@ class MenuController {
       res.json(result.rows[0]);
     } catch (err) {
       console.error(err);
+      // Postgres unique violation
+      if (err && err.code === '23505') {
+        return res.status(400).json({ error: "El menu " + req.body.nombre + " ya esiste" });
+      }
       res.status(500).json({ error: "Error al actualizar menú" });
     }
   }

@@ -9,6 +9,8 @@ const createMenu = async (nombre, descripcion, precio, userEmail) => {
         return response.data;
     } catch (error) {
         console.error('Error creating menu:', error);
+        const serverMsg = error?.response?.data?.error;
+        if (serverMsg) throw Error(serverMsg);
         throw Error("Hubo un error al registrar el menú, revise los campos ingresados");
     }
 };
@@ -38,6 +40,9 @@ const updateMenu = async (id, nombre, descripcion, precio, userEmail) => {
         const response = await axios.put(`${baseURL}menus/${id}`, { nombre, descripcion, precio }, { headers: { 'x-user-email': userEmail } });
         return response.data;
     } catch (error) {
+        console.error('Error updating menu:', error);
+        const serverMsg = error?.response?.data?.error;
+        if (serverMsg) throw Error(serverMsg);
         throw Error("Hubo un error al actualizar el menú");
     }
 };
