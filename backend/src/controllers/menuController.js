@@ -108,7 +108,7 @@ class MenuController {
         return res.status(404).json({ error: "Menú no encontrado" });
       }
 
-      await pool.query("UPDATE menus SET visible = false WHERE id = $1", [id]);
+      await pool.query("DELETE FROM menus WHERE id = $1", [id]);
       res.json({ message: "Menú eliminado correctamente" });
     } catch (err) {
       console.error(err);
