@@ -15,6 +15,12 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
     const navigate = useNavigate();
     const [hasChanges, setHasChanges] = useState(false);
 
+    const isFormValid =
+        nombre.trim().length > 0 &&
+        descripcion.trim().length > 0 &&
+        precio !== '' &&
+        Number(precio) > 0;
+
     useEffect(() => {
         if (initialData) {
             setNombre(initialData.nombre);
@@ -32,7 +38,7 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
 
             setHasChanges(isChanged);
         } else {
-            setHasChanges(nombre.length > 0);
+            setHasChanges(nombre.trim().length > 0);
         }
     }, [nombre, descripcion, precio, initialData]);
 
@@ -53,15 +59,22 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
     const handleSubmit = (e) => {
         e.preventDefault();
         setLoadingForm(true);
+        const cleanNombre = nombre.trim();
+        const cleanDesc = descripcion.trim();
         const precioNumerico = precio === '' ? undefined : Number(precio);
 
+        if (!isFormValid) {
+            setError("Por favor, completá todos los campos correctamente.");
+            return;
+        }
+        setLoadingForm(true);
         if (initialData && initialData.id) {
             MenuService.updateMenu(initialData.id, nombre, descripcion, precioNumerico, usuario.email)
                 .then(() => setSuccess(true))
                 .catch((err) => setError(err.message))
                 .finally(() => setLoadingForm(false));
         } else {
-            MenuService.createMenu(nombre, descripcion, precioNumerico, usuario.email)
+            MenuService.createMenu(cleanNombre, cleanDesc, precioNumerico, usuario.email)
                 .then(() => setSuccess(true))
                 .catch((err) => setError(err.message))
                 .finally(() => setLoadingForm(false));
@@ -122,13 +135,13 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
                     )}
                     <button
                         type="submit"
-                        disabled={loadingForm || !hasChanges}
+                        disabled={loadingForm || !hasChanges || !isFormValid}
                         style={{
                             ...styles.mainBtn,
                             flex: 2,
                             marginTop: 0,
-                            opacity: (loadingForm || !hasChanges) ? 0.6 : 1,
-                            cursor: (loadingForm || !hasChanges) ? 'not-allowed' : 'pointer'
+                            opacity: (loadingForm || !hasChanges || !isFormValid) ? 0.6 : 1,
+                            cursor: (loadingForm || !hasChanges || !isFormValid) ? 'not-allowed' : 'pointer'
                         }}
                     >
                         {loadingForm ? 'Cargando...' : (initialData ? 'Guardar Cambios' : 'Guardar Menú')}
