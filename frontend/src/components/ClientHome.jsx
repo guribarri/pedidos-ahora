@@ -8,6 +8,7 @@ const ClientHome = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
+  const [selectedMenu, setSelectedMenu] = useState(null);
 
   const loadMenus = async () => {
     try {
@@ -32,6 +33,10 @@ const ClientHome = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  const handleButtonClick = (menuId) => {
+    setSelectedMenu(menuId);
+  };
+
   return (
     <div style={styles.page}>
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : '0 40px' }}>
@@ -53,7 +58,14 @@ const ClientHome = () => {
         {loading ? (
           <p>Cargando...</p>
         ) : (
-          <div style={{ ...styles.cardGrid, gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(420px, 1fr))' : 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+          <div
+            style={{
+              ...styles.cardGrid,
+              gridTemplateColumns: isDesktop
+                ? 'repeat(auto-fill, minmax(420px, 1fr))'
+                : 'repeat(auto-fill, minmax(320px, 1fr))',
+            }}
+          >
             {menus.length === 0 && <p>No hay menús disponibles ahora.</p>}
             {menus.map((m) => (
               <article key={m.id} style={styles.card}>
@@ -63,7 +75,20 @@ const ClientHome = () => {
                 </div>
                 <p style={styles.cardDesc}>{m.descripcion}</p>
                 <div style={styles.cardFooter}>
-                  <div />
+                  <button
+                    onClick={() => handleButtonClick(m.id)}
+                    style={{
+                      backgroundColor: selectedMenu === m.id ? '#90ee90' : '#007bff',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '10px 20px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Elegir Menú
+                  </button>
                 </div>
               </article>
             ))}
