@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUserContext } from './hooks/useUserContext';
 import Login from './components/Login';
 import Home from './components/Home';
+import ClientHome from './components/ClientHome';
 import MenuForm from './components/MenuForm';
 
 function AppRoutes() {
@@ -34,15 +35,17 @@ function AppRoutes() {
             <Routes>
                 <Route
                     path="/"
-                    element={usuarioAutenticado ? <Home onLogout={handleLogout} /> : <Navigate to="/login" />}
+                    element={<ClientHome />}
                 />
+
                 <Route
-                    path="/login"
-                    element={!usuarioAutenticado ? <Login onLoginExitoso={handleLoginExitoso} /> : <Navigate to="/" />}
+                    path="/admin"
+                    element={usuarioAutenticado ? <Home onLogout={handleLogout} /> : <Login onLoginExitoso={handleLoginExitoso} />}
                 />
+
                 <Route
-                    path="/menu-form"
-                    element={usuarioAutenticado ? <MenuForm onLogout={handleLogout} /> : <Navigate to="/login" />}
+                    path="/admin/menu-form"
+                    element={usuarioAutenticado ? <MenuForm onLogout={handleLogout} /> : <Navigate to="/admin" />}
                 />
             </Routes>
         </BrowserRouter>
