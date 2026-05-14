@@ -5,6 +5,8 @@ const app = express();
 const userController = new (require('./src/controllers/userController'))();
 const MenuController = require('./src/controllers/menuController');
 const menuController = new MenuController();
+const PedidosController = require('./src/controllers/pedidosController');
+const pedidosController = new PedidosController();
 const { isAdmin } = require('./src/middleware/authMiddleware');
 
 // Configurar CORS
@@ -41,6 +43,10 @@ app.delete("/menus/:id", isAdmin, menuController.delete.bind(menuController));
 
 // PATCH alternar visibilidad (solo admin)
 app.patch("/menus/:id/visibility", isAdmin, menuController.toggleVisibility.bind(menuController));
+
+//POST crear pedido (publico)
+app.post("/pedidos", pedidosController.create.bind(pedidosController));
+
 
 app.listen(3000, () => {
   console.log('Servidor corriendo en puerto 3000');
