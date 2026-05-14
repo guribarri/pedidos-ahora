@@ -7,8 +7,9 @@ const ClientHome = () => {
   const [loading, setLoading] = useState(true);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const navigate = useNavigate();
   const [selectedMenu, setSelectedMenu] = useState(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const navigate = useNavigate();
 
   const loadMenus = async () => {
     try {
@@ -33,8 +34,9 @@ const ClientHome = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const handleButtonClick = (menuId) => {
-    setSelectedMenu(menuId);
+  const handleButtonClick = (menu) => {
+    setSelectedMenu(menu);
+    setSidebarVisible(true);
   };
 
   return (
@@ -51,8 +53,8 @@ const ClientHome = () => {
       </nav>
 
       <main style={styles.mainContent}>
-        <h1 style={styles.title}>Menús disponibles</h1>
-        <p style={styles.subtitle}>Estos son los menús que podés pedir ahora.</p>
+        <h1 style={{ ...styles.title, textAlign: 'center' }}>Menús disponibles</h1>
+        <p style={{ ...styles.subtitle, textAlign: 'center' }}>Estos son los menús que podés pedir ahora.</p>
         <div style={styles.divider} />
 
         {loading ? (
@@ -76,9 +78,9 @@ const ClientHome = () => {
                 <p style={styles.cardDesc}>{m.descripcion}</p>
                 <div style={styles.cardFooter}>
                   <button
-                    onClick={() => handleButtonClick(m.id)}
+                    onClick={() => handleButtonClick(m)}
                     style={{
-                      backgroundColor: selectedMenu === m.id ? '#90ee90' : '#007bff',
+                      backgroundColor: selectedMenu?.id === m.id ? '#90ee90' : '#007bff',
                       color: '#fff',
                       border: 'none',
                       borderRadius: '4px',
@@ -86,6 +88,7 @@ const ClientHome = () => {
                       cursor: 'pointer',
                       fontSize: '14px',
                     }}
+                    disabled={selectedMenu?.id === m.id}
                   >
                     Elegir Menú
                   </button>
@@ -95,81 +98,98 @@ const ClientHome = () => {
           </div>
         )}
       </main>
+
+      {sidebarVisible && selectedMenu && (
+        <aside style={styles.sidebar}>
+          <h2>{selectedMenu.nombre}</h2>
+          <p>{selectedMenu.descripcion}</p>
+          <p>Precio: ${Number(selectedMenu.precio).toFixed(2)}</p>
+        </aside>
+      )}
     </div>
   );
 };
 
 const styles = {
   page: {
-    fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    backgroundColor: '#f8f9fa',
-    margin: 0,
-    padding: 20,
-  },
-  mainContent: {
     display: 'flex',
     flexDirection: 'column',
+    height: '100vh',
+  },
+  navbar: {
+    display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#f1f1f1',
+    height: '60px',
+  },
+  brand: {
+    cursor: 'pointer',
+    fontSize: '24px',
+    fontWeight: 'bold',
+  },
+  mainContent: {
+    flex: 1,
+    padding: '20px',
   },
   title: {
-    fontSize: '28px',
-    color: '#2d3436',
-    margin: '0 0 10px 0',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    marginBottom: '10px',
   },
   subtitle: {
-    color: '#636e72',
     fontSize: '16px',
+    color: '#555',
     marginBottom: '20px',
   },
   divider: {
     height: '1px',
-    backgroundColor: '#eee',
-    margin: '20px 0',
-    width: '100%'
+    backgroundColor: '#ddd',
+    marginBottom: '20px',
   },
   cardGrid: {
     display: 'grid',
-    gap: '18px',
-    width: '100%',
-    maxWidth: '1400px',
+    gap: '20px',
   },
   card: {
-    backgroundColor: '#ffffff',
+    border: '1px solid #ccc',
+    borderRadius: '8px',
     padding: '16px',
-    borderRadius: '12px',
-    boxShadow: '0 6px 20px rgba(0,0,0,0.04)',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
+    backgroundColor: '#fff',
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '8px',
+    marginBottom: '10px',
   },
   cardTitle: {
-    fontSize: '16px',
-    margin: 0,
-    color: '#2d3436',
+    fontSize: '18px',
+    fontWeight: 'bold',
   },
   price: {
-    fontWeight: 700,
-    color: '#2f9e44',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: 'green',
   },
   cardDesc: {
-    color: '#69707a',
     fontSize: '14px',
-    marginBottom: '12px',
+    color: '#555',
+    marginBottom: '10px',
   },
   cardFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '12px',
+    textAlign: 'center',
   },
-  navbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '70px', backgroundColor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 },
-  brand: { fontSize: '22px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center' },
+  sidebar: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    width: '300px',
+    height: '100%',
+    backgroundColor: '#fff',
+    boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
+    padding: '20px',
+  },
 };
 
 export default ClientHome;
