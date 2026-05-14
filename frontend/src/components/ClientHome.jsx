@@ -40,7 +40,7 @@ const ClientHome = () => {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, marginRight: sidebarVisible ? '320px' : '0' }}> {/* Adjust page margin dynamically */}
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : '0 40px' }}>
         <div style={styles.brand} onClick={() => navigate('/') }>
           <span style={{ color: '#2d3436' }}>
