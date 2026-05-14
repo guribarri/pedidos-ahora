@@ -40,7 +40,7 @@ const ClientHome = () => {
   };
 
   return (
-    <div style={{ ...styles.page, marginRight: sidebarVisible ? '320px' : '0' }}> {/* Adjust page margin dynamically */}
+    <div style={{ ...styles.page, marginRight: sidebarVisible ? '320px' : '0' }}>
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : '0 40px' }}>
         <div style={styles.brand} onClick={() => navigate('/') }>
           <span style={{ color: '#2d3436' }}>
@@ -194,7 +194,7 @@ const styles = {
     backgroundColor: '#fff',
     boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
     padding: '20px',
-    overflowY: 'auto', // Added to make the sidebar scrollable
+    overflowY: 'auto',
   },
   sidebarItem: {
     marginBottom: '20px',
