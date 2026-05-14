@@ -39,6 +39,12 @@ const ClientHome = () => {
     setSidebarVisible(true);
   };
 
+  const handleCancel = () => {
+    setSelectedMenus([]);
+    setSidebarVisible(false);
+  };
+
+
   return (
     <div style={{ ...styles.page, marginRight: sidebarVisible ? '320px' : '0' }}>
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : '0 40px' }}>
@@ -100,8 +106,27 @@ const ClientHome = () => {
       </main>
 
       {sidebarVisible && selectedMenus.length > 0 && (
+
+        
+        
         <aside style={styles.sidebar}>
+          
           <h2>Menús Elegidos</h2>
+          <button 
+            onClick={() => handleCancel()}
+            style={{
+              backgroundColor: 'red',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '10px 20px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              top: '80px',
+              left: '20px',
+            }}
+            >Cancelar pedido
+          </button>
           {selectedMenus.map((menu) => (
             <div key={menu.id} style={styles.sidebarItem}>
               <h3>{menu.nombre}</h3>
