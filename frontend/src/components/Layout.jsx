@@ -28,7 +28,7 @@ const Layout = ({ children, onLogout, mostrarBotonAgregar = true }) => {
 
                 <div style={styles.navActions}>
                     {mostrarBotonAgregar && (
-                        <button onClick={() => navigate('/menu-form')} style={styles.addBtn}>
+                        <button onClick={() => navigate('/admin/menu-form')} style={styles.addBtn}>
                             {isMobile ? '+' : '+ Agregar menú'}
                         </button>
                     )}
