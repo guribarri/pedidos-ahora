@@ -50,7 +50,7 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
                 if (success) {
                     setSuccess(false);
                     if (onSuccess) onSuccess();
-                    if (!isModal) navigate('/');
+                    if (!isModal) navigate('/admin');
                 }
             }, duration);
             return () => clearTimeout(timer);
@@ -156,7 +156,7 @@ const MenuForm = ({ onLogout, isModal = false, initialData = null, onSuccess, on
                 </div>
 
                 {!isModal && (
-                    <button type="button" onClick={() => navigate('/')} style={styles.secBtn}>
+                    <button type="button" onClick={() => navigate('/admin')} style={styles.secBtn}>
                         Volver al inicio
                     </button>
                 )}
