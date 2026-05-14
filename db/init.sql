@@ -24,15 +24,22 @@ INSERT INTO users (email, password)
 VALUES ('admin@pedidiosahora.com', 'password123');
 
 --Tabla para pedidos que hagan los clientes
-CREATE TABLE pedidos(
+CREATE TABLE pedidos (
+    id SERIAL PRIMARY KEY,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--Tabla para pedidos-menu que hagan los clientes
+CREATE TABLE pedidos_menus(
     id_pedido INT,
     id_menu INT,
     cantidad INT,
-    precio_total DECIMAL(10,2),
-    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    precio_unitario DECIMAL(10,2),
     PRIMARY KEY (id_pedido, id_menu),
-    FOREIGN KEY (id_menu) REFERENCES menus(id)
+    FOREIGN KEY (id_menu) REFERENCES menus(id),
+    FOREIGN KEY (id_pedido) REFERENCES pedidos(id)
 );
+
 
 INSERT INTO menus (nombre, descripcion, precio, visible) VALUES
 ('Menú Obrero', 'Plato: Milanesa de ternera. Guarnición: Papas fritas. Bebida: Soda sifón. Postre: Flan con dulce de leche.', 12000.00, true),
