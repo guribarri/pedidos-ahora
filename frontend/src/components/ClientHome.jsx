@@ -7,7 +7,7 @@ const ClientHome = () => {
   const [loading, setLoading] = useState(true);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [selectedMenu, setSelectedMenu] = useState(null);
+  const [selectedMenus, setSelectedMenus] = useState([]);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const navigate = useNavigate();
 
@@ -35,7 +35,7 @@ const ClientHome = () => {
   }, []);
 
   const handleButtonClick = (menu) => {
-    setSelectedMenu(menu);
+    setSelectedMenus((prevMenus) => [...prevMenus, menu]);
     setSidebarVisible(true);
   };
 
@@ -80,7 +80,7 @@ const ClientHome = () => {
                   <button
                     onClick={() => handleButtonClick(m)}
                     style={{
-                      backgroundColor: selectedMenu?.id === m.id ? '#90ee90' : '#007bff',
+                      backgroundColor: selectedMenus.some(menu => menu.id === m.id) ? '#90ee90' : '#007bff',
                       color: '#fff',
                       border: 'none',
                       borderRadius: '4px',
@@ -88,7 +88,7 @@ const ClientHome = () => {
                       cursor: 'pointer',
                       fontSize: '14px',
                     }}
-                    disabled={selectedMenu?.id === m.id}
+                    disabled={selectedMenus.some(menu => menu.id === m.id)}
                   >
                     Elegir Menú
                   </button>
@@ -99,11 +99,16 @@ const ClientHome = () => {
         )}
       </main>
 
-      {sidebarVisible && selectedMenu && (
+      {sidebarVisible && selectedMenus.length > 0 && (
         <aside style={styles.sidebar}>
-          <h2>{selectedMenu.nombre}</h2>
-          <p>{selectedMenu.descripcion}</p>
-          <p>Precio: ${Number(selectedMenu.precio).toFixed(2)}</p>
+          <h2>Menús Elegidos</h2>
+          {selectedMenus.map((menu) => (
+            <div key={menu.id} style={styles.sidebarItem}>
+              <h3>{menu.nombre}</h3>
+              <p>{menu.descripcion}</p>
+              <p>Precio: ${Number(menu.precio).toFixed(2)}</p>
+            </div>
+          ))}
         </aside>
       )}
     </div>
@@ -189,6 +194,12 @@ const styles = {
     backgroundColor: '#fff',
     boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
     padding: '20px',
+    overflowY: 'auto', // Added to make the sidebar scrollable
+  },
+  sidebarItem: {
+    marginBottom: '20px',
+    padding: '10px',
+    borderBottom: '1px solid #ddd',
   },
 };
 
