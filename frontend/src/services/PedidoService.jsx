@@ -3,9 +3,16 @@ import { API_URL } from '../constants/url';
 
 const baseURL = API_URL;
 
-const createPedido = async (id_menu, cantidad, precio_unitario) => {
+const createPedido = async (menusOrId, cantidad, precio_unitario) => {
+    let menusPayload = [];
+    if (Array.isArray(menusOrId)) {
+        menusPayload = menusOrId;
+    } else {
+        menusPayload = [{ menu_id: menusOrId, cantidad, precio_unitario }];
+    }
+
     try {
-        const response = await axios.post(`${baseURL}pedidos`, { menus: [{ menu_id: id_menu, cantidad, precio_unitario }] });
+        const response = await axios.post(`${baseURL}pedidos`, { menus: menusPayload });
         return response.data;   
     }
     catch (error) {
