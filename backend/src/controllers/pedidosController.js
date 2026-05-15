@@ -33,6 +33,27 @@ class PedidosController {
             res.status(500).json({ message: "Error al crear el pedido", error: error.message });
         }
     }
+
+    //GET all pedidos
+    async getAll(req, res) {
+        try {
+            const result = await pool.query(`SELECT p.id, p.fecha, json_agg(json_build_object(
+                                                'id_menu', pm.id_menu,
+                                                'cantidad', pm.cantidad,
+                                                'precio_unitario', pm.precio_unitario,
+                                                'nombre', m.nombre,
+                                                'descripcion', m.descripcion
+                                              )) AS menus
+                                             FROM pedidos p
+                                             JOIN pedidos_menus pm ON p.id = pm.id_pedido
+                                             JOIN menus m ON pm.id_menu = m.id
+                                             GROUP BY p.id, p.fecha
+                                             ORDER BY p.fecha DESC`);
+            res.json(result.rows);
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener los pedidos", error: error.message });
+        }
+    }   
 }
 
 module.exports = PedidosController;

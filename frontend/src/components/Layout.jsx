@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUserContext } from '../hooks/useUserContext';
 import { useNavigate } from 'react-router-dom';
 
-const Layout = ({ children, onLogout, mostrarBotonAgregar = true }) => {
+const Layout = ({ children, onLogout, mostrarBotonAgregar = true, mostrarBotonPedidosConfirmados = true }) => {
     const { usuario } = useUserContext();
     const navigate = useNavigate();
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -30,6 +30,12 @@ const Layout = ({ children, onLogout, mostrarBotonAgregar = true }) => {
                     {mostrarBotonAgregar && (
                         <button onClick={() => navigate('/admin/menu-form')} style={styles.addBtn}>
                             {isMobile ? '+' : '+ Agregar menú'}
+                        </button>
+                    )}
+
+                    {mostrarBotonPedidosConfirmados && (
+                        <button onClick={() => navigate('/admin/pedidos-confirmados')} style={styles.addBtn}>
+                            {isMobile ? 'Pedidos' : 'Ver Pedidos'}
                         </button>
                     )}
 
