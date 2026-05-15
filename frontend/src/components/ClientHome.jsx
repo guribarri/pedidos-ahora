@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import MenuService from '../services/MenuService.jsx';
+import PedidoService from '../services/PedidoService.jsx';
 import { useNavigate } from 'react-router-dom';
 
 const ClientHome = () => {
@@ -9,7 +10,27 @@ const ClientHome = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedMenus, setSelectedMenus] = useState([]);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const [notification, setNotification] = useState(null);
+  const [notificationType, setNotificationType] = useState('success');
+  const notificationTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+    };
+  }, []);
+
+  const showNotification = (msg, type = 'success') => {
+    if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+    setNotificationType(type);
+    setNotification(msg);
+    notificationTimerRef.current = setTimeout(() => {
+      setNotification(null);
+      notificationTimerRef.current = null;
+    }, 3000);
+  };
 
   const loadMenus = async () => {
     try {
@@ -44,9 +65,41 @@ const ClientHome = () => {
     setSidebarVisible(false);
   };
 
+  const handlConfirmarPedido = async () => {
+    if (selectedMenus.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      const menusPayload = selectedMenus.map((menu) => ({ menu_id: menu.id, cantidad: 1, precio_unitario: menu.precio }));
+      await PedidoService.createPedido(menusPayload);
+      showNotification('Pedido confirmado correctamente');
+      setSelectedMenus([]);
+      setSidebarVisible(false);
+    } catch (e) {
+      console.error(e);
+      showNotification(e?.message || 'Error al confirmar el pedido');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   return (
     <div style={{ ...styles.page, marginRight: sidebarVisible ? '320px' : '0' }}>
+      {notification && (
+        <div
+          style={{
+            ...styles.notification,
+            backgroundColor:
+              notificationType === 'error'
+                ? 'rgba(255,69,58,0.95)'
+                : notificationType === 'info'
+                ? 'rgba(30,144,255,0.95)'
+                : 'rgba(40,167,69,0.95)'
+          }}
+        >
+          {notification}
+        </div>
+      )}
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : '0 40px' }}>
         <div style={styles.brand} onClick={() => navigate('/') }>
           <span style={{ color: '#2d3436' }}>
@@ -112,6 +165,23 @@ const ClientHome = () => {
         <aside style={styles.sidebar}>
           
           <h2>Menús Elegidos</h2>
+          <div style={{ display: 'flex', gap: '15px' }}>
+          <button 
+            onClick={() => handlConfirmarPedido()}
+            disabled={isSubmitting}
+            style={{
+              backgroundColor: '#90ee90',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              padding: '10px 10px',
+              fontSize: '14px',
+            }}
+          >
+            {isSubmitting ? 'Confirmando...' : 'Confirmar pedido'}
+          </button>
+          
           <button 
             onClick={() => handleCancel()}
             style={{
@@ -119,14 +189,14 @@ const ClientHome = () => {
               color: '#fff',
               border: 'none',
               borderRadius: '4px',
-              padding: '10px 20px',
+              padding: '10px 10px',
               cursor: 'pointer',
               fontSize: '14px',
-              top: '80px',
-              left: '20px',
             }}
-            >Cancelar pedido
+          >
+            Cancelar pedido
           </button>
+        </div>
           {selectedMenus.map((menu) => (
             <div key={menu.id} style={styles.sidebarItem}>
               <h3>{menu.nombre}</h3>
@@ -225,6 +295,20 @@ const styles = {
     marginBottom: '20px',
     padding: '10px',
     borderBottom: '1px solid #ddd',
+  },
+  notification: {
+    position: 'fixed',
+    top: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    color: '#fff',
+    padding: '10px 20px',
+    borderRadius: '6px',
+    zIndex: 9999,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    maxWidth: '90%',
+    textAlign: 'center',
   },
 };
 
