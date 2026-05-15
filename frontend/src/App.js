@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Home from './components/Home';
 import ClientHome from './components/ClientHome';
 import MenuForm from './components/MenuForm';
+import PedidosConfirmados from './components/PedidosConfirmados';
 
 function AppRoutes() {
     const { usuarioAutenticado, login, logout, loading } = useUserContext();
@@ -46,6 +47,10 @@ function AppRoutes() {
                 <Route
                     path="/admin/menu-form"
                     element={usuarioAutenticado ? <MenuForm onLogout={handleLogout} /> : <Navigate to="/admin" />}
+                />
+                <Route
+                    path="/admin/pedidos-confirmados"
+                    element={usuarioAutenticado ? <PedidosConfirmados onLogout={handleLogout} /> : <Navigate to="/admin" />}
                 />
             </Routes>
         </BrowserRouter>

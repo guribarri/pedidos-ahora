@@ -23,4 +23,18 @@ const createPedido = async (menusOrId, cantidad, precio_unitario) => {
     }
 };
 
-export default { createPedido };
+const getAllPedidos = async (userEmail) => {
+    try {
+        const response = await axios.get(`${baseURL}pedidos`, { headers: { 'x-user-email': userEmail } });
+        return response.data;
+    }
+    catch (error) {
+        console.error('Error fetching pedidos:', error);
+        const serverMsg = error?.response?.data?.message || error?.response?.data?.error;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error("Hubo un error al obtener los pedidos");
+    }
+};
+
+
+export default { createPedido, getAllPedidos };

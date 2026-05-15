@@ -46,6 +46,8 @@ app.patch("/menus/:id/visibility", isAdmin, menuController.toggleVisibility.bind
 
 //POST crear pedido (publico)
 app.post("/pedidos", pedidosController.create.bind(pedidosController));
+// GET todos los pedidos (solo admin)
+app.get("/pedidos", isAdmin, pedidosController.getAll.bind(pedidosController));
 
 
 app.listen(3000, () => {
