@@ -56,7 +56,10 @@ const ClientHome = () => {
   }, []);
 
   const handleButtonClick = (menu) => {
-    setSelectedMenus((prevMenus) => [...prevMenus, menu]);
+    setSelectedMenus((prevMenus) => [
+      ...prevMenus,
+      { ...menu, cantidad: 1 },
+    ]);
     setSidebarVisible(true);
   };
 
@@ -65,11 +68,37 @@ const ClientHome = () => {
     setSidebarVisible(false);
   };
 
+  const updateMenuCantidad = (menuId, newCantidad) => {
+    setSelectedMenus((prevMenus) =>
+      prevMenus.map((menu) =>
+        menu.id === menuId
+          ? { ...menu, cantidad: Math.max(1, Math.min(20, newCantidad)) }
+          : menu
+      )
+    );
+  };
+
+  const handleDecrement = (menuId, currentCantidad) => {
+    if (currentCantidad > 1) {
+      updateMenuCantidad(menuId, currentCantidad - 1);
+    }
+  };
+
+  const handleIncrement = (menuId, currentCantidad) => {
+    if (currentCantidad < 20) {
+      updateMenuCantidad(menuId, currentCantidad + 1);
+    }
+  };
+
   const handlConfirmarPedido = async () => {
     if (selectedMenus.length === 0) return;
     setIsSubmitting(true);
     try {
-      const menusPayload = selectedMenus.map((menu) => ({ menu_id: menu.id, cantidad: 1, precio_unitario: menu.precio }));
+      const menusPayload = selectedMenus.map((menu) => ({
+        menu_id: menu.id,
+        cantidad: menu.cantidad ?? 1,
+        precio_unitario: menu.precio,
+      }));
       await PedidoService.createPedido(menusPayload);
       showNotification('Pedido confirmado correctamente');
       setSelectedMenus([]);
@@ -202,6 +231,23 @@ const ClientHome = () => {
               <h3>{menu.nombre}</h3>
               <p>{menu.descripcion}</p>
               <p>Precio: ${Number(menu.precio).toFixed(2)}</p>
+              <div style={styles.quantityControl}>
+                <button
+                  onClick={() => handleDecrement(menu.id, menu.cantidad ?? 1)}
+                  style={styles.quantityButton}
+                  aria-label={`Disminuir cantidad de ${menu.nombre}`}
+                >
+                  -
+                </button>
+                <span style={styles.quantityValue}>{menu.cantidad ?? 1}</span>
+                <button
+                  onClick={() => handleIncrement(menu.id, menu.cantidad ?? 1)}
+                  style={styles.quantityButton}
+                  aria-label={`Aumentar cantidad de ${menu.nombre}`}
+                >
+                  +
+                </button>
+              </div>
             </div>
           ))}
         </aside>
@@ -295,6 +341,32 @@ const styles = {
     marginBottom: '20px',
     padding: '10px',
     borderBottom: '1px solid #ddd',
+  },
+  quantityControl: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: '10px',
+    marginTop: '10px',
+  },
+  quantityButton: {
+    width: '34px',
+    height: '34px',
+    borderRadius: '6px',
+    border: '1px solid #ccc',
+    backgroundColor: '#f1f1f1',
+    color: '#333',
+    cursor: 'pointer',
+    fontSize: '18px',
+    lineHeight: '1',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityValue: {
+    minWidth: '30px',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   notification: {
     position: 'fixed',
