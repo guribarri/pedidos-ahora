@@ -11,8 +11,8 @@ const { isAdmin } = require('./src/middleware/authMiddleware');
 
 // Configurar CORS
 app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
+  origin: process.env.NODE_ENV === 'production' ? 'http://localhost:3000' : true,
+  credentials: true,
 }));
 
 app.get('/', async (req, res) => {

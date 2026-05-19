@@ -6,6 +6,7 @@ const PedidosConfirmados = () => {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { usuario } = useUserContext();
 
   useEffect(() => {
@@ -46,6 +47,12 @@ const PedidosConfirmados = () => {
     };
   }, [usuario]); // Se vuelve a ejecutar únicamente cuando el objeto usuario cambia
 
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!usuario || !usuario.email) {
     return <div className="loading">Cargando datos de usuario...</div>;
   }
@@ -63,32 +70,46 @@ const PedidosConfirmados = () => {
   }
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Pedidos Confirmados</h2>
+    <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
+      <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
       {pedidos.map((pedido) => (
         <div key={pedido.id} style={styles.card}>
-          <div style={styles.cardHeader}>
+          <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
             <strong>ID Pedido: {pedido.id}</strong>
-            {pedido.fecha && <span style={styles.date}>{new Date(pedido.fecha).toLocaleString()}</span>}
+            {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
           </div>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Descripción</th>
-                <th style={styles.th}>Cantidad</th>
-              </tr>
-            </thead>
-            <tbody>
+          {isMobile ? (
+            <div style={styles.mobileList}>
               {pedido.menus && pedido.menus.map((menu, index) => (
-                <tr key={index} style={styles.tr}>
-                  <td style={styles.td}>{menu.nombre}</td>
-                  <td style={styles.td}>{menu.descripcion}</td>
-                  <td style={styles.tdCenter}>{menu.cantidad}</td>
-                </tr>
+                <div key={index} style={styles.mobileItem}>
+                  <div style={styles.mobileItemHeader}>
+                    <span style={styles.mobileBold}>{menu.nombre}</span>
+                    <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
+                  </div>
+                  <p style={styles.mobileDesc}>{menu.descripcion}</p>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Nombre</th>
+                  <th style={styles.th}>Descripción</th>
+                  <th style={styles.th}>Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedido.menus && pedido.menus.map((menu, index) => (
+                  <tr key={index} style={styles.tr}>
+                    <td style={styles.td}>{menu.nombre}</td>
+                    <td style={styles.td}>{menu.descripcion}</td>
+                    <td style={styles.tdCenter}>{menu.cantidad}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       ))}
     </div>
@@ -148,6 +169,39 @@ const styles = {
     padding: '10px 8px',
     textAlign: 'right',
     fontWeight: '600'
+  },
+  mobileList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  },
+  mobileItem: {
+    padding: '12px',
+    backgroundColor: '#f8f8f8',
+    borderRadius: '6px',
+    borderLeft: '4px solid #007bff'
+  },
+  mobileItemHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '6px'
+  },
+  mobileBold: {
+    fontWeight: '600',
+    fontSize: '14px'
+  },
+  mobileQuantity: {
+    fontSize: '13px',
+    color: '#666',
+    backgroundColor: '#e8f4f8',
+    padding: '4px 8px',
+    borderRadius: '4px'
+  },
+  mobileDesc: {
+    fontSize: '12px',
+    color: '#666',
+    margin: '0'
   }
 };
 

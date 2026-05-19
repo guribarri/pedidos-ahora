@@ -1,18 +1,28 @@
-# Getting Started with Create React App
+# Introducción
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Esta aplicación frontend usa Create React App y se ejecuta en modo desarrollo con `npm start`.
 
-## Available Scripts
+## Guía rápida para el entorno local
 
-In the project directory, you can run:
+1. Entra a la carpeta `frontend/`.
+2. Crea un archivo `.env.local`.
+3. Añade la URL del backend de tu PC en la red local, por ejemplo:
+
+```
+REACT_APP_API_URL=http://172.18.82.171:4000/
+```
+
+4. Guarda el archivo y ejecuta `npm start`.
+
+> Ojo: `frontend/.env.local` es un archivo local. No debe subirse al repositorio ni compartirse en la nube.
 
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Inicia la app en modo desarrollo.
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+La página se recarga cuando haces cambios.
+Puede aparecer errores de lint en la consola.
 
 ### `npm test`
 

@@ -71,7 +71,7 @@ const Login = ({ onLoginExitoso }) => {
             <input
               type="email"
               name="email"
-              style={styles.input}
+              style={{ ...styles.input, padding: isMobile ? '16px' : '12px', fontSize: isMobile ? '18px' : '16px' }}
               placeholder="tu@email.com"
               value={formData.email}
               onChange={handleChange}
@@ -84,7 +84,7 @@ const Login = ({ onLoginExitoso }) => {
             <input
               type="password"
               name="password"
-              style={styles.input}
+              style={{ ...styles.input, padding: isMobile ? '16px' : '12px', fontSize: isMobile ? '18px' : '16px' }}
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
@@ -99,7 +99,9 @@ const Login = ({ onLoginExitoso }) => {
             disabled={loading}
             style={{
               ...styles.submitBtn,
-              backgroundColor: loading ? '#b2bec3' : '#007bff'
+              backgroundColor: loading ? '#b2bec3' : '#007bff',
+              padding: isMobile ? '16px' : '14px',
+              fontSize: isMobile ? '18px' : '16px'
             }}
           >
             {loading ? 'Cargando...' : 'Entrar'}
@@ -146,21 +148,18 @@ const styles = {
   label: { display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#2d3436' },
   input: {
     width: '100%',
-    padding: '12px',
     borderRadius: '12px',
     border: '1px solid #ddd',
     boxSizing: 'border-box',
-    fontSize: '16px',
-    outlineColor: '#007bff'
+    outlineColor: '#007bff',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
   },
   submitBtn: {
     width: '100%',
-    padding: '14px',
     color: 'white',
     border: 'none',
     borderRadius: '12px',
     fontWeight: '700',
-    fontSize: '16px',
     cursor: 'pointer',
     marginTop: '10px',
     transition: '0.3s'
