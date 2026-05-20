@@ -7,12 +7,38 @@ const PedidosConfirmados = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [updatingId, setUpdatingId] = useState(null);
   const { usuario } = useUserContext();
 
+  const getEstadoColor = (estado) => {
+    switch(estado) {
+      case 'confirmado':
+        return '#ff4757';
+      case 'en_preparacion':
+        return '#ffa502';
+      case 'entregado':
+        return '#2ed573';
+      default:
+        return '#999';
+    }
+  };
+
+  const getEstadoLabel = (estado) => {
+    switch(estado) {
+      case 'confirmado':
+        return 'Confirmado';
+      case 'en_preparacion':
+        return 'En Preparación';
+      case 'entregado':
+        return 'Entregado';
+      default:
+        return estado;
+    }
+  };
+
   useEffect(() => {
-    // 1. Evita llamar a la API si el usuario o su email aún no están cargados en el contexto
     if (!usuario || !usuario.email) {
-      return; 
+      return;
     }
 
     let isMounted = true;
@@ -21,10 +47,14 @@ const PedidosConfirmados = () => {
       try {
         setLoading(true);
         const data = await PedidoService.getAllPedidos(usuario.email);
-        
-        // 2. Solo actualiza el estado si el componente sigue montado
+
         if (isMounted) {
-          setPedidos(data);
+          const sortedData = data.sort((a, b) => {
+            if (a.estado === 'entregado' && b.estado !== 'entregado') return 1;
+            if (a.estado !== 'entregado' && b.estado === 'entregado') return -1;
+            return new Date(b.fecha) - new Date(a.fecha);
+          });
+          setPedidos(sortedData);
           setError(null);
         }
       } catch (err) {
@@ -41,17 +71,39 @@ const PedidosConfirmados = () => {
 
     loadPedidosConfirmados();
 
-    // 3. Función de limpieza (cleanup) que cancela el efecto si cambia el usuario o se desmonta
     return () => {
       isMounted = false;
     };
-  }, [usuario]); // Se vuelve a ejecutar únicamente cuando el objeto usuario cambia
+  }, [usuario]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const handleEstadoChange = async (pedidoId, direction) => {
+    try {
+      setUpdatingId(pedidoId);
+      const response = await PedidoService.updatePedidoEstado(pedidoId, direction);
+
+      setPedidos(prevPedidos => {
+        const updatedPedidos = prevPedidos.map(p =>
+          p.id === pedidoId ? { ...p, estado: response.pedido.estado } : p
+        );
+
+        return updatedPedidos.sort((a, b) => {
+          if (a.estado === 'entregado' && b.estado !== 'entregado') return 1;
+          if (a.estado !== 'entregado' && b.estado === 'entregado') return -1;
+          return new Date(b.fecha) - new Date(a.fecha);
+        });
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   if (!usuario || !usuario.email) {
     return <div className="loading">Cargando datos de usuario...</div>;
@@ -73,9 +125,40 @@ const PedidosConfirmados = () => {
     <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
       <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
       {pedidos.map((pedido) => (
-        <div key={pedido.id} style={styles.card}>
+        <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
           <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
-            <strong>ID Pedido: {pedido.id}</strong>
+            <div style={styles.headerLeft}>
+              <strong>ID Pedido: {pedido.id}</strong>
+              <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
+                {getEstadoLabel(pedido.estado)}
+              </span>
+            </div>
+            <div style={styles.buttonsContainer}>
+              <button
+                onClick={() => handleEstadoChange(pedido.id, 'backward')}
+                disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
+                style={{
+                  ...styles.navButton,
+                  opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
+                  cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                }}
+                title="Retroceder estado"
+              >
+                ←
+              </button>
+              <button
+                onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
+                style={{
+                  ...styles.navButton,
+                  opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
+                  cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                }}
+                title="Avanzar estado"
+              >
+                →
+              </button>
+            </div>
             {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
           </div>
           {isMobile ? (
@@ -133,13 +216,47 @@ const styles = {
     border: '1px solid #e0e0e0',
     borderRadius: '8px',
     padding: '12px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    borderLeft: '6px solid #999'
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '8px'
+    marginBottom: '8px',
+    gap: '12px'
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flex: 1
+  },
+  estadoLabel: {
+    color: 'white',
+    padding: '6px 12px',
+    borderRadius: '4px',
+    fontSize: '13px',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  buttonsContainer: {
+    display: 'flex',
+    gap: '8px',
+    marginLeft: 'auto',
+    marginRight: '16px'
+  },
+  navButton: {
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s'
   },
   date: {
     fontSize: '12px',
