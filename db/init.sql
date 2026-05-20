@@ -26,7 +26,8 @@ VALUES ('admin@pedidiosahora.com', 'password123');
 --Tabla para pedidos que hagan los clientes
 CREATE TABLE pedidos (
     id SERIAL PRIMARY KEY,
-    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(50) DEFAULT 'confirmado'
 );
 
 --Tabla para pedidos-menu que hagan los clientes

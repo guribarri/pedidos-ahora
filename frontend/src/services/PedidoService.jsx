@@ -36,5 +36,24 @@ const getAllPedidos = async (userEmail) => {
     }
 };
 
+const updatePedidoEstado = async (pedidoId, direction) => {
+    try {
+        const userStorage = localStorage.getItem('user');
+        const user = userStorage ? JSON.parse(userStorage) : null;
+        const userEmail = user?.email;
 
-export default { createPedido, getAllPedidos };
+        const response = await axios.patch(`${baseURL}pedidos/${pedidoId}/estado`, { direction }, {
+            headers: { 'x-user-email': userEmail }
+        });
+        return response.data;
+    }
+    catch (error) {
+        console.error('Error updating pedido estado:', error);
+        const serverMsg = error?.response?.data?.message;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error("Hubo un error al actualizar el estado del pedido");
+    }
+};
+
+
+export default { createPedido, getAllPedidos, updatePedidoEstado };
