@@ -1,10 +1,36 @@
 const pool = require("../db");
 
 class PedidosController {
+    async getPedidoById(id, userEmail = null) {
+        const queryParams = [id];
+        let query = `SELECT p.id, p.fecha, p.estado, p.user_email, json_agg(json_build_object(
+                                                'id_menu', pm.id_menu,
+                                                'cantidad', pm.cantidad,
+                                                'precio_unitario', pm.precio_unitario,
+                                                'nombre', m.nombre,
+                                                'descripcion', m.descripcion
+                                              )) AS menus
+                                             FROM pedidos p
+                                             JOIN pedidos_menus pm ON p.id = pm.id_pedido
+                                             JOIN menus m ON pm.id_menu = m.id
+                                             WHERE p.id = $1`;
+
+        if (userEmail) {
+            query += ' AND p.user_email = $2';
+            queryParams.push(userEmail);
+        }
+
+        query += ' GROUP BY p.id, p.fecha, p.estado, p.user_email';
+
+        const result = await pool.query(query, queryParams);
+        return result.rows[0];
+    }
+
     // POST crear pedido
     async create(req, res) {
         try {
             const { menus } = req.body;
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
 
             // Validar que haya al menos un menú
             if (!menus || menus.length === 0) {
@@ -18,19 +44,109 @@ class PedidosController {
                 }
             }
 
-            // Crear el pedido (Postgres: DEFAULT VALUES)
-            const result = await pool.query("INSERT INTO pedidos DEFAULT VALUES RETURNING id");
+            // Crear el pedido con el email del usuario
+            const result = await pool.query("INSERT INTO pedidos (user_email) VALUES ($1) RETURNING id", [userEmail]);
             const pedido_id = result.rows[0].id;
 
-            // Insertar los menús del pedido (parámetros $1..$4 para pg)
             const insertMenusQuery = "INSERT INTO pedidos_menus (id_pedido, id_menu, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)";
             for (const menu of menus) {
                 await pool.query(insertMenusQuery, [pedido_id, menu.menu_id, menu.cantidad, menu.precio_unitario]);
             }
 
-            res.status(201).json({ message: "Pedido confirmado con exito", pedido_id });
+            const pedido = await this.getPedidoById(pedido_id, userEmail);
+            res.status(201).json({ message: "Pedido confirmado con exito", pedido });
         } catch (error) {
             res.status(500).json({ message: "Error al crear el pedido", error: error.message });
+        }
+    }
+
+    async getByUser(req, res) {
+        try {
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail;
+            if (!userEmail) {
+                return res.status(400).json({ message: "El email del usuario es requerido" });
+            }
+
+            const result = await pool.query(`SELECT p.id, p.fecha, p.estado, p.user_email, json_agg(json_build_object(
+                                                'id_menu', pm.id_menu,
+                                                'cantidad', pm.cantidad,
+                                                'precio_unitario', pm.precio_unitario,
+                                                'nombre', m.nombre,
+                                                'descripcion', m.descripcion
+                                              )) AS menus
+                                             FROM pedidos p
+                                             JOIN pedidos_menus pm ON p.id = pm.id_pedido
+                                             JOIN menus m ON pm.id_menu = m.id
+                                             WHERE p.user_email = $1
+                                             GROUP BY p.id, p.fecha, p.estado, p.user_email
+                                             ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC`, [userEmail]);
+
+            res.json(result.rows);
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener los pedidos del usuario", error: error.message });
+        }
+    }
+
+    async getById(req, res) {
+        try {
+            const { id } = req.params;
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
+
+            const pedido = await this.getPedidoById(id, userEmail);
+            if (!pedido) {
+                return res.status(404).json({ message: "Pedido no encontrado" });
+            }
+
+            res.json(pedido);
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener el pedido", error: error.message });
+        }
+    }
+
+    async addMenus(req, res) {
+        try {
+            const { id } = req.params;
+            const { menus } = req.body;
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
+
+            if (!menus || menus.length === 0) {
+                return res.status(400).json({ message: "El pedido debe contener al menos un menú" });
+            }
+
+            const pedidoResult = await pool.query("SELECT user_email FROM pedidos WHERE id = $1", [id]);
+            if (pedidoResult.rows.length === 0) {
+                return res.status(404).json({ message: "Pedido no encontrado" });
+            }
+
+            const pedidoOwnerEmail = pedidoResult.rows[0].user_email;
+            if (pedidoOwnerEmail && pedidoOwnerEmail !== userEmail) {
+                return res.status(403).json({ message: "No tienes permiso para modificar este pedido" });
+            }
+
+            for (const menu of menus) {
+                if (!menu.menu_id || !menu.cantidad || !menu.precio_unitario) {
+                    return res.status(400).json({ message: "Cada menú debe contener menu_id, cantidad y precio_unitario" });
+                }
+            }
+
+            const selectExistingQuery = "SELECT cantidad FROM pedidos_menus WHERE id_pedido = $1 AND id_menu = $2";
+            const updateQuery = "UPDATE pedidos_menus SET cantidad = $1 WHERE id_pedido = $2 AND id_menu = $3";
+            const insertQuery = "INSERT INTO pedidos_menus (id_pedido, id_menu, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)";
+
+            for (const menu of menus) {
+                const existing = await pool.query(selectExistingQuery, [id, menu.menu_id]);
+                if (existing.rows.length > 0) {
+                    const newCantidad = existing.rows[0].cantidad + menu.cantidad;
+                    await pool.query(updateQuery, [newCantidad, id, menu.menu_id]);
+                } else {
+                    await pool.query(insertQuery, [id, menu.menu_id, menu.cantidad, menu.precio_unitario]);
+                }
+            }
+
+            const pedido = await this.getPedidoById(id, userEmail);
+            res.json({ message: "Menús agregados al pedido", pedido });
+        } catch (error) {
+            res.status(500).json({ message: "Error al actualizar el pedido", error: error.message });
         }
     }
 

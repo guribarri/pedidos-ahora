@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import MenuService from '../services/MenuService.jsx';
 import PedidoService from '../services/PedidoService.jsx';
 import { useNavigate } from 'react-router-dom';
+import { useUserContext } from '../hooks/useUserContext';
 
 const ClientHome = () => {
   const [menus, setMenus] = useState([]);
@@ -12,10 +13,26 @@ const ClientHome = () => {
   const [selectedMenus, setSelectedMenus] = useState([]);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pedidoConfirmado, setPedidoConfirmado] = useState(null);
+  const [currentPedidoId, setCurrentPedidoId] = useState(() => {
+    const saved = localStorage.getItem('currentPedidoId');
+    return saved ? Number(saved) : null;
+  });
+  const [orderPanelVisible, setOrderPanelVisible] = useState(() => localStorage.getItem('orderPanelVisible') === 'true');
+  const [orderPanelMinimized, setOrderPanelMinimized] = useState(() => localStorage.getItem('orderPanelMinimized') === 'true');
   const navigate = useNavigate();
   const [notification, setNotification] = useState(null);
   const [notificationType, setNotificationType] = useState('success');
   const notificationTimerRef = useRef(null);
+  const { usuario } = useUserContext();
+
+  const getHomeRoute = (user) => {
+    const email = user?.email?.toLowerCase?.();
+    if (email === 'admin@pedidiosahora.com') {
+      return '/admin';
+    }
+    return '/';
+  };
 
   useEffect(() => {
     return () => {
@@ -57,6 +74,22 @@ const ClientHome = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  useEffect(() => {
+    if (currentPedidoId !== null) {
+      localStorage.setItem('currentPedidoId', String(currentPedidoId));
+    } else {
+      localStorage.removeItem('currentPedidoId');
+    }
+  }, [currentPedidoId]);
+
+  useEffect(() => {
+    localStorage.setItem('orderPanelVisible', String(orderPanelVisible));
+  }, [orderPanelVisible]);
+
+  useEffect(() => {
+    localStorage.setItem('orderPanelMinimized', String(orderPanelMinimized));
+  }, [orderPanelMinimized]);
+
   const handleButtonClick = (menu) => {
     setSelectedMenus((prevMenus) => [
       ...prevMenus,
@@ -68,6 +101,77 @@ const ClientHome = () => {
   const handleCancel = () => {
     setSelectedMenus([]);
     setSidebarVisible(false);
+  };
+
+  const handleAgregarOtroMenu = () => {
+    if (!currentPedidoId) {
+      return;
+    }
+
+    setSidebarVisible(true);
+    setOrderPanelVisible(true);
+    setOrderPanelMinimized(false);
+    showNotification('Seleccioná otro menú para agregar al pedido actual', 'info');
+  };
+
+  const handleMinimizeDetallePedido = () => {
+    setOrderPanelVisible(false);
+    setOrderPanelMinimized(true);
+  };
+
+  useEffect(() => {
+    if (!currentPedidoId) {
+      return;
+    }
+
+    const refreshPedido = async () => {
+      try {
+        const pedido = await PedidoService.getPedidoById(currentPedidoId, usuario?.email);
+        if (!pedido) return;
+        const totalPedido = pedido.menus.reduce(
+          (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
+          0
+        );
+        setPedidoConfirmado((prev) => {
+          if (!prev || prev.id !== pedido.id) {
+            return { ...pedido, total: totalPedido };
+          }
+          return { ...prev, ...pedido, total: totalPedido };
+        });
+      } catch (error) {
+        console.error('Error actualizando estado del pedido:', error);
+      }
+    };
+
+    refreshPedido();
+    const intervalId = setInterval(refreshPedido, 5000);
+    return () => clearInterval(intervalId);
+  }, [currentPedidoId, usuario?.email]);
+
+  const getEstadoColor = (estado) => {
+    switch (estado) {
+      case 'confirmado':
+        return '#ff4757';
+      case 'en_preparacion':
+        return '#ffa502';
+      case 'entregado':
+        return '#2ed573';
+      default:
+        return '#999';
+    }
+  };
+
+  const getEstadoLabel = (estado) => {
+    switch (estado) {
+      case 'confirmado':
+        return 'Confirmado';
+      case 'en_preparacion':
+        return 'En Preparación';
+      case 'entregado':
+        return 'Entregado';
+      default:
+        return estado;
+    }
   };
 
   const updateMenuCantidad = (menuId, newCantidad) => {
@@ -101,18 +205,47 @@ const ClientHome = () => {
         cantidad: menu.cantidad ?? 1,
         precio_unitario: menu.precio,
       }));
-      await PedidoService.createPedido(menusPayload);
-      showNotification('Pedido confirmado correctamente');
+
+      const userEmail = usuario?.email;
+      let response;
+      let successMessage = 'Pedido confirmado correctamente';
+
+      if (currentPedidoId) {
+        response = await PedidoService.addMenusToPedido(currentPedidoId, menusPayload, userEmail);
+        successMessage = 'Menú agregado al pedido existente';
+      } else {
+        response = await PedidoService.createPedido(menusPayload, userEmail);
+      }
+
+      const pedido = response?.pedido || response;
+      const totalPedido = pedido.menus.reduce(
+        (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
+        0
+      );
+
+      setCurrentPedidoId(pedido.id);
+      setPedidoConfirmado({
+        ...pedido,
+        total: totalPedido,
+      });
+      setOrderPanelVisible(true);
+      setOrderPanelMinimized(false);
+
+      showNotification(successMessage);
       setSelectedMenus([]);
       setSidebarVisible(false);
     } catch (e) {
       console.error(e);
-      showNotification(e?.message || 'Error al confirmar el pedido');
+      showNotification(e?.message || 'Error al confirmar el pedido', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleCerrarDetallePedido = () => {
+    setOrderPanelVisible(false);
+    setOrderPanelMinimized(true);
+  };
 
   return (
     <div style={{ ...styles.page, marginRight: sidebarVisible && !isMobile ? '300px' : '0', transition: 'margin-right 0.3s ease' }}>
@@ -131,8 +264,49 @@ const ClientHome = () => {
           {notification}
         </div>
       )}
+
+      {pedidoConfirmado && orderPanelVisible && (
+        <div style={styles.orderPanel}>
+          <div style={styles.orderPanelHeader}>
+            <div>
+              <h2 style={styles.modalTitle}>Detalle de pedido</h2>
+              {pedidoConfirmado.id && <p style={styles.modalSubtitle}>Pedido #{pedidoConfirmado.id}</p>}
+            </div>
+            <button onClick={handleCerrarDetallePedido} style={styles.modalCloseButton} aria-label="Minimizar detalle de pedido">
+              —
+            </button>
+          </div>
+          <div style={styles.modalStatusRow}>
+            <span style={{ ...styles.modalStatus, backgroundColor: getEstadoColor(pedidoConfirmado.estado) }}>
+              {getEstadoLabel(pedidoConfirmado.estado)}
+            </span>
+            <span style={styles.modalTotalLabel}>Total:</span>
+            <strong style={styles.modalTotalValue}>${pedidoConfirmado.total.toFixed(2)}</strong>
+          </div>
+          <div style={styles.modalList}>
+            {pedidoConfirmado.menus.map((menu, index) => (
+              <div key={index} style={styles.modalItem}>
+                <div style={styles.modalItemHeader}>
+                  <h3 style={styles.modalItemTitle}>{menu.nombre}</h3>
+                  <span style={styles.modalItemCantidad}>x{menu.cantidad}</span>
+                </div>
+                <p style={styles.modalItemDescription}>{menu.descripcion}</p>
+                <p style={styles.modalItemPrice}>Precio unitario: ${menu.precio_unitario.toFixed(2)}</p>
+              </div>
+            ))}
+          </div>
+          <div style={styles.modalActionsRow}>
+            <button onClick={handleAgregarOtroMenu} style={{ ...styles.modalSecondaryButton, marginRight: '12px' }}>
+              Agregar otro menú
+            </button>
+            <button onClick={handleCerrarDetallePedido} style={styles.modalActionButton}>
+              Minimizar
+            </button>
+          </div>
+        </div>
+      )}
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : isTablet ? '0 25px' : '0 40px', height: isMobile ? '50px' : '60px' }}>
-        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate('/') }>
+        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate(getHomeRoute(usuario)) }>
           <span style={{ color: '#2d3436' }}>
             P{!isMobile && 'edidos'}
           </span>
@@ -140,12 +314,44 @@ const ClientHome = () => {
             A{!isMobile && 'hora'}!
           </span>
         </div>
+        {currentPedidoId && !orderPanelVisible && (
+          <button
+            onClick={() => {
+              setOrderPanelVisible(true);
+              setOrderPanelMinimized(false);
+            }}
+            style={styles.openOrderPanelButton}
+            aria-label="Mostrar estado del pedido"
+          >
+            Ver estado del pedido
+          </button>
+        )}
       </nav>
-
-      <main style={{ ...styles.mainContent, padding: isMobile ? '15px' : isTablet ? '20px' : '20px' }}>
-        <h1 style={{ ...styles.title, fontSize: isMobile ? '20px' : '24px', textAlign: 'center' }}>Menús disponibles</h1>
-        <p style={{ ...styles.subtitle, fontSize: isMobile ? '14px' : '16px', textAlign: 'center' }}>Estos son los menús que podés pedir ahora.</p>
-        <div style={styles.divider} />
+      {pedidoConfirmado && orderPanelMinimized && (
+        <div style={styles.minimizedOrderPanel}>
+          <div>
+            <strong style={{ display: 'block', marginBottom: '4px' }}>Pedido #{pedidoConfirmado.id}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ ...styles.modalStatus, backgroundColor: getEstadoColor(pedidoConfirmado.estado), padding: '6px 10px', fontSize: '12px' }}>
+                {getEstadoLabel(pedidoConfirmado.estado)}
+              </span>
+              <span style={{ color: '#333', fontWeight: '700' }}>Total: ${pedidoConfirmado.total.toFixed(2)}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setOrderPanelVisible(true);
+              setOrderPanelMinimized(false);
+            }}
+            style={styles.openOrderPanelButton}
+          >
+            Abrir
+          </button>
+        </div>
+      )}
+      <main style={styles.mainContent}>
+        <h1 style={styles.title}>Bienvenido{usuario?.name ? `, ${usuario.name}` : ''}</h1>
+        <p style={styles.subtitle}>Seleccioná el menú que quieras y confirmá tu pedido.</p>
 
         {loading ? (
           <p>Cargando...</p>
@@ -331,6 +537,9 @@ const styles = {
     gap: '20px',
   },
   card: {
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: '260px',
     border: '1px solid #ccc',
     borderRadius: '8px',
     padding: '16px',
@@ -360,6 +569,7 @@ const styles = {
   },
   cardFooter: {
     textAlign: 'center',
+    marginTop: 'auto',
   },
   sidebar: {
     position: 'fixed',
@@ -455,6 +665,173 @@ const styles = {
     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
     maxWidth: '90%',
     textAlign: 'center',
+  },
+  orderPanel: {
+    position: 'fixed',
+    right: '20px',
+    bottom: '20px',
+    width: 'min(420px, 95vw)',
+    maxHeight: '80vh',
+    backgroundColor: '#fff',
+    borderRadius: '20px',
+    padding: '20px',
+    boxShadow: '0 18px 40px rgba(0,0,0,0.18)',
+    zIndex: 10000,
+    overflowY: 'auto',
+  },
+  orderPanelHeader: {
+    position: 'relative',
+    paddingTop: '8px',
+    marginBottom: '16px',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '16px',
+    marginBottom: '20px',
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: '22px',
+    color: '#2d3436',
+  },
+  modalSubtitle: {
+    margin: '6px 0 0 0',
+    color: '#666',
+    fontSize: '14px',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: '12px',
+    right: '12px',
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '24px',
+    color: '#999',
+    lineHeight: '1',
+  },
+  modalStatusRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '20px',
+  },
+  modalStatus: {
+    color: '#fff',
+    padding: '8px 14px',
+    borderRadius: '999px',
+    fontWeight: '700',
+    fontSize: '13px',
+    letterSpacing: '0.4px',
+  },
+  modalTotalLabel: {
+    color: '#555',
+    fontSize: '15px',
+  },
+  modalTotalValue: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#2d3436',
+  },
+  modalList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    marginBottom: '20px',
+  },
+  modalItem: {
+    backgroundColor: '#f8f9fc',
+    borderRadius: '12px',
+    padding: '16px',
+    border: '1px solid #e8eaf2',
+  },
+  modalItemHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '12px',
+    marginBottom: '10px',
+  },
+  modalItemTitle: {
+    margin: 0,
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#2d3436',
+  },
+  modalItemCantidad: {
+    color: '#555',
+    fontWeight: '700',
+    fontSize: '14px',
+  },
+  modalItemDescription: {
+    margin: '0 0 8px 0',
+    color: '#555',
+    fontSize: '14px',
+    lineHeight: '1.5',
+  },
+  modalItemPrice: {
+    margin: 0,
+    fontSize: '14px',
+    color: '#333',
+    fontWeight: '600',
+  },
+  modalActionButton: {
+    width: '100%',
+    backgroundColor: '#007bff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '12px 16px',
+    cursor: 'pointer',
+    fontSize: '15px',
+    fontWeight: '700',
+  },
+  modalActionsRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  modalSecondaryButton: {
+    width: '100%',
+    backgroundColor: '#f1f2f6',
+    color: '#333',
+    border: '1px solid #ced6e0',
+    borderRadius: '10px',
+    padding: '12px 16px',
+    cursor: 'pointer',
+    fontSize: '15px',
+    fontWeight: '700',
+  },
+  openOrderPanelButton: {
+    backgroundColor: '#ff4757',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '10px 16px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '700',
+  },
+  minimizedOrderPanel: {
+    position: 'fixed',
+    right: '20px',
+    bottom: '20px',
+    width: 'min(360px, 90vw)',
+    backgroundColor: '#fff',
+    borderRadius: '18px',
+    border: '1px solid rgba(0,0,0,0.08)',
+    boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
+    padding: '16px 18px',
+    zIndex: 10001,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '12px',
   },
 };
 

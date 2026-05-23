@@ -9,4 +9,10 @@ const pool = new Pool({
   port: 5432,
 });
 
+// Asegurar que la tabla de pedidos tenga el campo user_email en caso de migración incremental.
+pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS user_email VARCHAR(255);")
+  .catch((err) => {
+    console.error('Error al asegurar esquema de pedidos:', err.message || err);
+  });
+
 module.exports = pool;

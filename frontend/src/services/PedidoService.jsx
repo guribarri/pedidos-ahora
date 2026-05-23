@@ -3,23 +3,85 @@ import { API_URL } from '../constants/url';
 
 const baseURL = API_URL;
 
-const createPedido = async (menusOrId, cantidad, precio_unitario) => {
-    let menusPayload = [];
-    if (Array.isArray(menusOrId)) {
-        menusPayload = menusOrId;
-    } else {
-        menusPayload = [{ menu_id: menusOrId, cantidad, precio_unitario }];
-    }
-
+const getUserEmail = () => {
     try {
-        const response = await axios.post(`${baseURL}pedidos`, { menus: menusPayload });
-        return response.data;   
+        const userStorage = localStorage.getItem('user');
+        const user = userStorage ? JSON.parse(userStorage) : null;
+        return user?.email || null;
+    } catch {
+        return null;
     }
-    catch (error) {
+};
+
+const createPedido = async (menusPayload, userEmail) => {
+    try {
+        const headers = {};
+        const email = userEmail || getUserEmail();
+        if (email) {
+            headers['x-user-email'] = email;
+        }
+
+        const response = await axios.post(`${baseURL}pedidos`, { menus: menusPayload }, { headers });
+        return response.data;
+    } catch (error) {
         console.error('Error creating pedido:', error);
         const serverMsg = error?.response?.data?.message;
         if (serverMsg) throw Error(serverMsg);
-        throw Error("Hubo un error al crear el pedido, revise los campos ingresados");
+        throw Error('Hubo un error al crear el pedido, revise los campos ingresados');
+    }
+};
+
+const addMenusToPedido = async (pedidoId, menusPayload, userEmail) => {
+    try {
+        const headers = {};
+        const email = userEmail || getUserEmail();
+        if (email) {
+            headers['x-user-email'] = email;
+        }
+
+        const response = await axios.patch(`${baseURL}pedidos/${pedidoId}/menus`, { menus: menusPayload }, { headers });
+        return response.data;
+    } catch (error) {
+        console.error('Error adding menus to pedido:', error);
+        const serverMsg = error?.response?.data?.message;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Hubo un error al actualizar el pedido');
+    }
+};
+
+const getPedidoById = async (pedidoId, userEmail) => {
+    try {
+        const headers = {};
+        const email = userEmail || getUserEmail();
+        if (email) {
+            headers['x-user-email'] = email;
+        }
+
+        const response = await axios.get(`${baseURL}pedidos/${pedidoId}`, { headers });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching pedido by id:', error);
+        const serverMsg = error?.response?.data?.message || error?.response?.data?.error;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Hubo un error al obtener el pedido');
+    }
+};
+
+const getUserPedidos = async (userEmail) => {
+    try {
+        const headers = {};
+        const email = userEmail || getUserEmail();
+        if (email) {
+            headers['x-user-email'] = email;
+        }
+
+        const response = await axios.get(`${baseURL}pedidos/usuario`, { headers });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching user pedidos:', error);
+        const serverMsg = error?.response?.data?.message || error?.response?.data?.error;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Hubo un error al obtener los pedidos del usuario');
     }
 };
 
@@ -32,16 +94,13 @@ const getAllPedidos = async (userEmail) => {
         console.error('Error fetching pedidos:', error);
         const serverMsg = error?.response?.data?.message || error?.response?.data?.error;
         if (serverMsg) throw Error(serverMsg);
-        throw Error("Hubo un error al obtener los pedidos");
+        throw Error('Hubo un error al obtener los pedidos');
     }
 };
 
 const updatePedidoEstado = async (pedidoId, direction) => {
     try {
-        const userStorage = localStorage.getItem('user');
-        const user = userStorage ? JSON.parse(userStorage) : null;
-        const userEmail = user?.email;
-
+        const userEmail = getUserEmail();
         const response = await axios.patch(`${baseURL}pedidos/${pedidoId}/estado`, { direction }, {
             headers: { 'x-user-email': userEmail }
         });
@@ -51,9 +110,8 @@ const updatePedidoEstado = async (pedidoId, direction) => {
         console.error('Error updating pedido estado:', error);
         const serverMsg = error?.response?.data?.message;
         if (serverMsg) throw Error(serverMsg);
-        throw Error("Hubo un error al actualizar el estado del pedido");
+        throw Error('Hubo un error al actualizar el estado del pedido');
     }
 };
 
-
-export default { createPedido, getAllPedidos, updatePedidoEstado };
+export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado };

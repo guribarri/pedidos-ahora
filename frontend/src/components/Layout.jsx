@@ -5,6 +5,14 @@ import { useNavigate } from 'react-router-dom';
 const Layout = ({ children, onLogout, mostrarBotonAgregar = true, mostrarBotonPedidosConfirmados = true }) => {
     const { usuario } = useUserContext();
     const navigate = useNavigate();
+
+    const getHomeRoute = (user) => {
+        const email = user?.email?.toLowerCase?.();
+        if (email === 'admin@pedidiosahora.com') {
+            return '/admin';
+        }
+        return '/';
+    };
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     useEffect(() => {
@@ -17,7 +25,7 @@ const Layout = ({ children, onLogout, mostrarBotonAgregar = true, mostrarBotonPe
         <div style={styles.page}>
             <nav style={{ ...styles.navbar, padding: isMobile ? '0 12px' : '0 40px', height: isMobile ? '60px' : '70px' }}>
 
-                <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '22px' }} onClick={() => navigate('/')}>
+<div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '22px' }} onClick={() => navigate(getHomeRoute(usuario))}>
                     <span style={{ color: '#2d3436' }}>
                         P{!isMobile && 'edidos'}
                     </span>

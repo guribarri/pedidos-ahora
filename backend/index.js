@@ -44,8 +44,14 @@ app.delete("/menus/:id", isAdmin, menuController.delete.bind(menuController));
 // PATCH alternar visibilidad (solo admin)
 app.patch("/menus/:id/visibility", isAdmin, menuController.toggleVisibility.bind(menuController));
 
-//POST crear pedido (publico)
+//POST crear pedido (público)
 app.post("/pedidos", pedidosController.create.bind(pedidosController));
+// GET pedidos del usuario actual
+app.get("/pedidos/usuario", pedidosController.getByUser.bind(pedidosController));
+// GET pedido por ID para el usuario actual
+app.get("/pedidos/:id", pedidosController.getById.bind(pedidosController));
+// PATCH agregar menús a un pedido existente para el usuario actual
+app.patch("/pedidos/:id/menus", pedidosController.addMenus.bind(pedidosController));
 // GET todos los pedidos (solo admin)
 app.get("/pedidos", isAdmin, pedidosController.getAll.bind(pedidosController));
 // PATCH actualizar estado del pedido (solo admin)
