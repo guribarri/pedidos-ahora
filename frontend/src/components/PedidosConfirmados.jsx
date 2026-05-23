@@ -1,8 +1,10 @@
 import { useUserContext } from '../hooks/useUserContext';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from './Layout.jsx';
 import PedidoService from '../services/PedidoService.jsx';
 
-const PedidosConfirmados = () => {
+const PedidosConfirmados = ({ onLogout }) => {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -106,96 +108,123 @@ const PedidosConfirmados = () => {
   };
 
   if (!usuario || !usuario.email) {
-    return <div className="loading">Cargando datos de usuario...</div>;
+    return (
+      <Layout onLogout={onLogout}>
+        <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
+          <div className="loading">Cargando datos de usuario...</div>
+        </div>
+      </Layout>
+    );
   }
 
   if (loading) {
-    return <div className="loading">Cargando pedidos confirmados...</div>;
+    return (
+      <Layout onLogout={onLogout}>
+        <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
+          <div className="loading">Cargando pedidos confirmados...</div>
+        </div>
+      </Layout>
+    );
   }
 
   if (error) {
-    return <div className="error">Error: {error}</div>;
+    return (
+      <Layout onLogout={onLogout}>
+        <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
+          <div className="error">Error: {error}</div>
+        </div>
+      </Layout>
+    );
   }
 
   if (pedidos.length === 0) {
-    return <div className="no-pedidos">No hay pedidos confirmados</div>;
+    return (
+      <Layout onLogout={onLogout}>
+        <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
+          <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
+          <div className="no-pedidos">No hay pedidos confirmados</div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
-    <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
-      <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
-      {pedidos.map((pedido) => (
-        <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
-          <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
-            <div style={styles.headerLeft}>
-              <strong>ID Pedido: {pedido.id}</strong>
-              <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
-                {getEstadoLabel(pedido.estado)}
-              </span>
+    <Layout onLogout={onLogout}>
+      <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
+        <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
+        {pedidos.map((pedido) => (
+          <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
+            <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
+              <div style={styles.headerLeft}>
+                <strong>ID Pedido: {pedido.id}</strong>
+                <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
+                  {getEstadoLabel(pedido.estado)}
+                </span>
+              </div>
+              <div style={styles.buttonsContainer}>
+                <button
+                  onClick={() => handleEstadoChange(pedido.id, 'backward')}
+                  disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
+                  style={{
+                    ...styles.navButton,
+                    opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
+                    cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Retroceder estado"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                  disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
+                  style={{
+                    ...styles.navButton,
+                    opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
+                    cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Avanzar estado"
+                >
+                  →
+                </button>
+              </div>
+              {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
             </div>
-            <div style={styles.buttonsContainer}>
-              <button
-                onClick={() => handleEstadoChange(pedido.id, 'backward')}
-                disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
-                style={{
-                  ...styles.navButton,
-                  opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
-                  cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                }}
-                title="Retroceder estado"
-              >
-                ←
-              </button>
-              <button
-                onClick={() => handleEstadoChange(pedido.id, 'forward')}
-                disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
-                style={{
-                  ...styles.navButton,
-                  opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
-                  cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                }}
-                title="Avanzar estado"
-              >
-                →
-              </button>
-            </div>
-            {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
-          </div>
-          {isMobile ? (
-            <div style={styles.mobileList}>
-              {pedido.menus && pedido.menus.map((menu, index) => (
-                <div key={index} style={styles.mobileItem}>
-                  <div style={styles.mobileItemHeader}>
-                    <span style={styles.mobileBold}>{menu.nombre}</span>
-                    <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
-                  </div>
-                  <p style={styles.mobileDesc}>{menu.descripcion}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Nombre</th>
-                  <th style={styles.th}>Descripción</th>
-                  <th style={styles.th}>Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              <div style={styles.mobileList}>
                 {pedido.menus && pedido.menus.map((menu, index) => (
-                  <tr key={index} style={styles.tr}>
-                    <td style={styles.td}>{menu.nombre}</td>
-                    <td style={styles.td}>{menu.descripcion}</td>
-                    <td style={styles.tdCenter}>{menu.cantidad}</td>
-                  </tr>
+                  <div key={index} style={styles.mobileItem}>
+                    <div style={styles.mobileItemHeader}>
+                      <span style={styles.mobileBold}>{menu.nombre}</span>
+                      <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
+                    </div>
+                    <p style={styles.mobileDesc}>{menu.descripcion}</p>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ))}
-    </div>
+              </div>
+            ) : (
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Nombre</th>
+                    <th style={styles.th}>Descripción</th>
+                    <th style={styles.th}>Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedido.menus && pedido.menus.map((menu, index) => (
+                    <tr key={index} style={styles.tr}>
+                      <td style={styles.td}>{menu.nombre}</td>
+                      <td style={styles.td}>{menu.descripcion}</td>
+                      <td style={styles.tdCenter}>{menu.cantidad}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ))}
+      </div>
+    </Layout>
   );
 };
 

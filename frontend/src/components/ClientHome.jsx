@@ -306,7 +306,7 @@ const ClientHome = () => {
         </div>
       )}
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : isTablet ? '0 25px' : '0 40px', height: isMobile ? '50px' : '60px' }}>
-        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate(getHomeRoute(usuario)) }>
+        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate('/') }>
           <span style={{ color: '#2d3436' }}>
             P{!isMobile && 'edidos'}
           </span>
