@@ -3,36 +3,31 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-    const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
     const [usuario, setUsuario] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const userStorage = localStorage.getItem('user');
-        if (userStorage) {
+        let userStorage = localStorage.getItem('user');
+        
+        if (!userStorage) {
+            const email = `usuario_${Date.now()}@local`;
+            localStorage.setItem('user', JSON.stringify({ email }));
+            setUsuario({ email });
+        } else {
             try {
                 const datos = JSON.parse(userStorage);
                 setUsuario(datos);
-                setUsuarioAutenticado(true);
             } catch (e) {
-                localStorage.removeItem('user');
+                const email = `usuario_${Date.now()}@local`;
+                localStorage.setItem('user', JSON.stringify({ email }));
+                setUsuario({ email });
             }
         }
         setLoading(false);
     }, []);
 
-    const login = (usuario) => {
-        setUsuarioAutenticado(true);
-        setUsuario(usuario);
-    };
-
-    const logout = () => {
-        setUsuarioAutenticado(false);
-        setUsuario(null);
-    };
-
     return (
-        <UserContext.Provider value={{ usuarioAutenticado, usuario, login, logout, loading }}>
+        <UserContext.Provider value={{ usuario, loading }}>
             {children}
         </UserContext.Provider>
     );

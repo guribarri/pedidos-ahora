@@ -127,7 +127,10 @@ const ClientHome = () => {
     const refreshPedido = async () => {
       try {
         const pedido = await PedidoService.getPedidoById(currentPedidoId, usuario?.email);
-        if (!pedido) return;
+        if (!pedido) {
+          setCurrentPedidoId(null);
+          return;
+        }
         const totalPedido = pedido.menus.reduce(
           (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
           0
@@ -140,6 +143,9 @@ const ClientHome = () => {
         });
       } catch (error) {
         console.error('Error actualizando estado del pedido:', error);
+        if (error.message && (error.message.includes('no encontrado') || error.message.includes('404') || error.message.includes('Not Found'))) {
+          setCurrentPedidoId(null);
+        }
       }
     };
 
@@ -211,8 +217,19 @@ const ClientHome = () => {
       let successMessage = 'Pedido confirmado correctamente';
 
       if (currentPedidoId) {
-        response = await PedidoService.addMenusToPedido(currentPedidoId, menusPayload, userEmail);
-        successMessage = 'Menú agregado al pedido existente';
+        try {
+          response = await PedidoService.addMenusToPedido(currentPedidoId, menusPayload, userEmail);
+          successMessage = 'Menú agregado al pedido existente';
+        } catch (err) {
+          if (err.message && (err.message.includes('no encontrado') || err.message.includes('404') || err.message.includes('Not Found'))) {
+            console.log('El pedido actual no se encuentra en el servidor. Creando uno nuevo...');
+            localStorage.removeItem('currentPedidoId');
+            response = await PedidoService.createPedido(menusPayload, userEmail);
+            successMessage = 'Pedido confirmado correctamente';
+          } else {
+            throw err;
+          }
+        }
       } else {
         response = await PedidoService.createPedido(menusPayload, userEmail);
       }
@@ -291,7 +308,7 @@ const ClientHome = () => {
                   <span style={styles.modalItemCantidad}>x{menu.cantidad}</span>
                 </div>
                 <p style={styles.modalItemDescription}>{menu.descripcion}</p>
-                <p style={styles.modalItemPrice}>Precio unitario: ${menu.precio_unitario.toFixed(2)}</p>
+                <p style={styles.modalItemPrice}>Precio unitario: ${Number(menu.precio_unitario).toFixed(2)}</p>
               </div>
             ))}
           </div>

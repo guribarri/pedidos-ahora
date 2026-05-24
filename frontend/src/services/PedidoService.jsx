@@ -87,7 +87,13 @@ const getUserPedidos = async (userEmail) => {
 
 const getAllPedidos = async (userEmail) => {
     try {
-        const response = await axios.get(`${baseURL}pedidos`, { headers: { 'x-user-email': userEmail } });
+        const headers = {};
+        const email = userEmail || getUserEmail();
+        if (email) {
+            headers['x-user-email'] = email;
+        }
+
+        const response = await axios.get(`${baseURL}pedidos/usuario`, { headers });
         return response.data;
     }
     catch (error) {

@@ -7,7 +7,7 @@ const MenuController = require('./src/controllers/menuController');
 const menuController = new MenuController();
 const PedidosController = require('./src/controllers/pedidosController');
 const pedidosController = new PedidosController();
-const { isAdmin } = require('./src/middleware/authMiddleware');
+const { isAdmin, isAuthenticated } = require('./src/middleware/authMiddleware');
 
 // Configurar CORS
 app.use(cors({
@@ -54,8 +54,8 @@ app.get("/pedidos/:id", pedidosController.getById.bind(pedidosController));
 app.patch("/pedidos/:id/menus", pedidosController.addMenus.bind(pedidosController));
 // GET todos los pedidos (solo admin)
 app.get("/pedidos", isAdmin, pedidosController.getAll.bind(pedidosController));
-// PATCH actualizar estado del pedido (solo admin)
-app.patch("/pedidos/:id/estado", isAdmin, pedidosController.updateStatus.bind(pedidosController));
+// PATCH actualizar estado del pedido (autenticado)
+app.patch("/pedidos/:id/estado", isAuthenticated, pedidosController.updateStatus.bind(pedidosController));
 
 
 app.listen(3000, () => {

@@ -2,35 +2,50 @@ const pool = require("../db");
 
 class PedidosController {
     async getPedidoById(id, userEmail = null) {
-        const queryParams = [id];
-        let query = `SELECT p.id, p.fecha, p.estado, p.user_email, json_agg(json_build_object(
-                                                'id_menu', pm.id_menu,
-                                                'cantidad', pm.cantidad,
-                                                'precio_unitario', pm.precio_unitario,
-                                                'nombre', m.nombre,
-                                                'descripcion', m.descripcion
-                                              )) AS menus
-                                             FROM pedidos p
-                                             JOIN pedidos_menus pm ON p.id = pm.id_pedido
-                                             JOIN menus m ON pm.id_menu = m.id
-                                             WHERE p.id = $1`;
+        try {
+            // Primero obtener el pedido básico
+            const queryParams = [id];
+            let query = `SELECT p.id, p.fecha, p.estado, p.user_email FROM pedidos p WHERE p.id = $1`;
+            
+            if (userEmail) {
+                query += ' AND p.user_email = $2';
+                queryParams.push(userEmail);
+            }
 
-        if (userEmail) {
-            query += ' AND p.user_email = $2';
-            queryParams.push(userEmail);
+            const pedidoResult = await pool.query(query, queryParams);
+            
+            if (pedidoResult.rows.length === 0) {
+                return null;
+            }
+
+            const pedido = pedidoResult.rows[0];
+
+            // Obtener los menús asociados
+            const menusResult = await pool.query(`
+                SELECT pm.id_menu, pm.cantidad, pm.precio_unitario, m.nombre, m.descripcion
+                FROM pedidos_menus pm
+                JOIN menus m ON pm.id_menu = m.id
+                WHERE pm.id_pedido = $1
+            `, [id]);
+
+            pedido.menus = menusResult.rows;
+            return pedido;
+        } catch (error) {
+            console.error('Error en getPedidoById:', error);
+            return null;
         }
-
-        query += ' GROUP BY p.id, p.fecha, p.estado, p.user_email';
-
-        const result = await pool.query(query, queryParams);
-        return result.rows[0];
     }
 
     // POST crear pedido
     async create(req, res) {
         try {
             const { menus } = req.body;
-            const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail;
+
+            // Si no hay email, generar uno
+            if (!userEmail) {
+                return res.status(400).json({ message: "El email del usuario es requerido en el header x-user-email" });
+            }
 
             // Validar que haya al menos un menú
             if (!menus || menus.length === 0) {
@@ -56,6 +71,7 @@ class PedidosController {
             const pedido = await this.getPedidoById(pedido_id, userEmail);
             res.status(201).json({ message: "Pedido confirmado con exito", pedido });
         } catch (error) {
+            console.error('Error al crear pedido:', error);
             res.status(500).json({ message: "Error al crear el pedido", error: error.message });
         }
     }
@@ -67,22 +83,29 @@ class PedidosController {
                 return res.status(400).json({ message: "El email del usuario es requerido" });
             }
 
-            const result = await pool.query(`SELECT p.id, p.fecha, p.estado, p.user_email, json_agg(json_build_object(
-                                                'id_menu', pm.id_menu,
-                                                'cantidad', pm.cantidad,
-                                                'precio_unitario', pm.precio_unitario,
-                                                'nombre', m.nombre,
-                                                'descripcion', m.descripcion
-                                              )) AS menus
-                                             FROM pedidos p
-                                             JOIN pedidos_menus pm ON p.id = pm.id_pedido
-                                             JOIN menus m ON pm.id_menu = m.id
-                                             WHERE p.user_email = $1
-                                             GROUP BY p.id, p.fecha, p.estado, p.user_email
-                                             ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC`, [userEmail]);
+            const result = await pool.query(`
+                SELECT p.id, p.fecha, p.estado, p.user_email
+                FROM pedidos p
+                WHERE p.user_email = $1
+                ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC
+            `, [userEmail]);
 
-            res.json(result.rows);
+            // Obtener menús para cada pedido
+            const pedidos = await Promise.all(result.rows.map(async (pedido) => {
+                const menusResult = await pool.query(`
+                    SELECT pm.id_menu, pm.cantidad, pm.precio_unitario, m.nombre, m.descripcion
+                    FROM pedidos_menus pm
+                    JOIN menus m ON pm.id_menu = m.id
+                    WHERE pm.id_pedido = $1
+                `, [pedido.id]);
+                
+                pedido.menus = menusResult.rows;
+                return pedido;
+            }));
+
+            res.json(pedidos);
         } catch (error) {
+            console.error('Error al obtener pedidos del usuario:', error);
             res.status(500).json({ message: "Error al obtener los pedidos del usuario", error: error.message });
         }
     }
@@ -99,6 +122,7 @@ class PedidosController {
 
             res.json(pedido);
         } catch (error) {
+            console.error('Error al obtener el pedido:', error);
             res.status(500).json({ message: "Error al obtener el pedido", error: error.message });
         }
     }
@@ -153,20 +177,28 @@ class PedidosController {
     //GET all pedidos
     async getAll(req, res) {
         try {
-            const result = await pool.query(`SELECT p.id, p.fecha, p.estado, json_agg(json_build_object(
-                                                'id_menu', pm.id_menu,
-                                                'cantidad', pm.cantidad,
-                                                'precio_unitario', pm.precio_unitario,
-                                                'nombre', m.nombre,
-                                                'descripcion', m.descripcion
-                                              )) AS menus
-                                             FROM pedidos p
-                                             JOIN pedidos_menus pm ON p.id = pm.id_pedido
-                                             JOIN menus m ON pm.id_menu = m.id
-                                             GROUP BY p.id, p.fecha, p.estado
-                                             ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC`);
-            res.json(result.rows);
+            const result = await pool.query(`
+                SELECT p.id, p.fecha, p.estado, p.user_email
+                FROM pedidos p
+                ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC
+            `);
+
+            // Obtener menús para cada pedido
+            const pedidos = await Promise.all(result.rows.map(async (pedido) => {
+                const menusResult = await pool.query(`
+                    SELECT pm.id_menu, pm.cantidad, pm.precio_unitario, m.nombre, m.descripcion
+                    FROM pedidos_menus pm
+                    JOIN menus m ON pm.id_menu = m.id
+                    WHERE pm.id_pedido = $1
+                `, [pedido.id]);
+                
+                pedido.menus = menusResult.rows;
+                return pedido;
+            }));
+
+            res.json(pedidos);
         } catch (error) {
+            console.error('Error al obtener los pedidos:', error);
             res.status(500).json({ message: "Error al obtener los pedidos", error: error.message });
         }
     }
@@ -176,19 +208,26 @@ class PedidosController {
         try {
             const { id } = req.params;
             const { direction } = req.body;
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail;
 
             if (!direction || !['forward', 'backward'].includes(direction)) {
                 return res.status(400).json({ message: "Direction debe ser 'forward' o 'backward'" });
             }
 
-            // Obtener el estado actual del pedido
-            const pedidoResult = await pool.query("SELECT estado FROM pedidos WHERE id = $1", [id]);
+            // Obtener el estado actual del pedido y el propietario
+            const pedidoResult = await pool.query("SELECT estado, user_email FROM pedidos WHERE id = $1", [id]);
 
             if (pedidoResult.rows.length === 0) {
                 return res.status(404).json({ message: "Pedido no encontrado" });
             }
 
-            const estadoActual = pedidoResult.rows[0].estado;
+            const { estado: estadoActual, user_email: pedidoOwnerEmail } = pedidoResult.rows[0];
+
+            // Verificar que el usuario sea propietario del pedido o admin
+            if (pedidoOwnerEmail && pedidoOwnerEmail !== userEmail) {
+                return res.status(403).json({ message: "No tienes permiso para actualizar este pedido" });
+            }
+
             let nuevoEstado;
 
             // Lógica de transición de estados

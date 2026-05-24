@@ -17,4 +17,16 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { isAdmin };
+// Middleware para verificar que el usuario esté autenticado
+const isAuthenticated = (req, res, next) => {
+  const userEmail = req.headers['x-user-email'] || req.body.userEmail;
+
+  if (!userEmail) {
+    return res.status(401).json({ error: 'Usuario no autenticado' });
+  }
+
+  req.userEmail = userEmail;
+  next();
+};
+
+module.exports = { isAdmin, isAuthenticated };
