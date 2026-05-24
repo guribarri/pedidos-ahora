@@ -44,10 +44,13 @@ const PedidosConfirmados = ({ onLogout }) => {
     }
 
     let isMounted = true;
+    let initialLoad = true;
 
     const loadPedidosConfirmados = async () => {
       try {
-        setLoading(true);
+        if (initialLoad) {
+          setLoading(true);
+        }
         const data = await PedidoService.getAllPedidos(usuario.email);
 
         if (isMounted) {
@@ -65,16 +68,19 @@ const PedidosConfirmados = ({ onLogout }) => {
           setPedidos([]);
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && initialLoad) {
           setLoading(false);
+          initialLoad = false;
         }
       }
     };
 
     loadPedidosConfirmados();
+    const intervalId = setInterval(loadPedidosConfirmados, 2000);
 
     return () => {
       isMounted = false;
+      clearInterval(intervalId);
     };
   }, [usuario]);
 

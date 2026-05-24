@@ -93,7 +93,7 @@ const getAllPedidos = async (userEmail) => {
             headers['x-user-email'] = email;
         }
 
-        const response = await axios.get(`${baseURL}pedidos/usuario`, { headers });
+        const response = await axios.get(`${baseURL}pedidos`, { headers });
         return response.data;
     }
     catch (error) {
