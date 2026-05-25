@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useUserContext } from '../hooks/useUserContext';
 
 const Login = ({ onLoginExitoso }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useUserContext();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -36,7 +38,7 @@ const Login = ({ onLoginExitoso }) => {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('user', JSON.stringify(data.user));
+        login(data.user);
         if (onLoginExitoso) onLoginExitoso();
       } else {
         setError('Credenciales inválidas. Reintentá.');

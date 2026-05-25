@@ -50,7 +50,7 @@ const Layout = ({ children, onLogout, mostrarBotonAgregar = true, mostrarBotonPe
                     <div style={{ ...styles.userSection, gap: isMobile ? '4px' : '8px', paddingLeft: isMobile ? '6px' : '10px' }}>
                         <div style={{ ...styles.userBadge, padding: isMobile ? '4px 8px' : '5px 10px' }}>
                             <span style={{ ...styles.userIcon, fontSize: isMobile ? '14px' : '16px' }}>👤</span>
-                            {!isMobile && <span style={{ ...styles.userName, fontSize: isMobile ? '11px' : '13px' }}>{usuario?.email.split('@')[0]}</span>}
+                            {!isMobile && <span style={{ ...styles.userName, fontSize: isMobile ? '11px' : '13px' }}>{usuario?.email?.split('@')[0]}</span>}
                         </div>
 
                         <button

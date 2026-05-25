@@ -26,8 +26,18 @@ export const UserProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
+    const login = (userData) => {
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUsuario(userData);
+    };
+
+    const logout = () => {
+        localStorage.removeItem('user');
+        setUsuario(null);
+    };
+
     return (
-        <UserContext.Provider value={{ usuario, loading }}>
+        <UserContext.Provider value={{ usuario, loading, login, logout }}>
             {children}
         </UserContext.Provider>
     );
