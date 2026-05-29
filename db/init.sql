@@ -42,6 +42,40 @@ CREATE TABLE pedidos_menus(
     FOREIGN KEY (id_pedido) REFERENCES pedidos(id)
 );
 
+-- Tabla para mesas físicas del restaurante
+CREATE TABLE mesas (
+    id SERIAL PRIMARY KEY,
+    numero INT NOT NULL UNIQUE,
+    qr_token VARCHAR(255) NOT NULL UNIQUE,
+    estado VARCHAR(50) DEFAULT 'libre'
+);
+
+-- Tabla para agrupar comensales bajo una sesión activa de mesa
+CREATE TABLE sesiones_mesas (
+    id SERIAL PRIMARY KEY,
+    mesa_id INT REFERENCES mesas(id) ON DELETE CASCADE,
+    fecha_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_fin TIMESTAMP,
+    estado VARCHAR(50) DEFAULT 'activa'
+);
+
+-- Columnas de mesa en pedidos
+ALTER TABLE pedidos ADD COLUMN mesa_id INT REFERENCES mesas(id) ON DELETE SET NULL;
+ALTER TABLE pedidos ADD COLUMN sesion_mesa_id INT REFERENCES sesiones_mesas(id) ON DELETE SET NULL;
+
+-- 10 mesas fijas con sus tokens QR únicos
+INSERT INTO mesas (numero, qr_token) VALUES
+(1,  'm1-qr-a3f8k2p9'),
+(2,  'm2-qr-b7n4x1w6'),
+(3,  'm3-qr-c2j9r5t8'),
+(4,  'm4-qr-d6v1m3q7'),
+(5,  'm5-qr-e4h8l0u2'),
+(6,  'm6-qr-f9z3k7p5'),
+(7,  'm7-qr-g1y6n4s8'),
+(8,  'm8-qr-h5w2x9r3'),
+(9,  'm9-qr-i8q4j7v1'),
+(10, 'm10-qr-j3t5b2n9');
+
 
 INSERT INTO menus (nombre, descripcion, precio, visible) VALUES
 ('Menú Obrero', 'Plato: Milanesa de ternera. Guarnición: Papas fritas. Bebida: Soda sifón. Postre: Flan con dulce de leche.', 12000.00, true),

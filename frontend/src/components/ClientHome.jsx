@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import MenuService from '../services/MenuService.jsx';
 import PedidoService from '../services/PedidoService.jsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useUserContext } from '../hooks/useUserContext';
 
 const ClientHome = () => {
@@ -20,6 +20,12 @@ const ClientHome = () => {
   });
   const [orderPanelVisible, setOrderPanelVisible] = useState(() => localStorage.getItem('orderPanelVisible') === 'true');
   const [orderPanelMinimized, setOrderPanelMinimized] = useState(() => localStorage.getItem('orderPanelMinimized') === 'true');
+  const [mesaActual, setMesaActual] = useState(() => {
+    const saved = localStorage.getItem('mesaNumero');
+    return saved ? Number(saved) : null;
+  });
+  const { numero } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [notification, setNotification] = useState(null);
   const [notificationType, setNotificationType] = useState('success');
@@ -49,6 +55,32 @@ const ClientHome = () => {
       notificationTimerRef.current = null;
     }, 3000);
   };
+
+  useEffect(() => {
+    const initMesa = async () => {
+      const token = searchParams.get('token');
+      if (numero && token) {
+        try {
+          const data = await PedidoService.accederMesa(numero, token);
+          setMesaActual(data.mesaNumero);
+          localStorage.setItem('mesaId', data.mesaId);
+          localStorage.setItem('sesionMesaId', data.sesionId);
+          localStorage.setItem('mesaNumero', data.mesaNumero);
+          
+          if (data.currentPedidoId) {
+            setCurrentPedidoId(data.currentPedidoId);
+            setOrderPanelVisible(true);
+            setOrderPanelMinimized(false);
+          }
+          showNotification(`Acceso exitoso a Mesa ${data.mesaNumero}`, 'success');
+        } catch (error) {
+          console.error('Error al acceder a la mesa:', error);
+          showNotification('Error al acceder a la mesa. Verificá el código QR.', 'error');
+        }
+      }
+    };
+    initMesa();
+  }, [numero, searchParams]);
 
   const loadMenus = async () => {
     try {
@@ -287,7 +319,10 @@ const ClientHome = () => {
           <div style={styles.orderPanelHeader}>
             <div>
               <h2 style={styles.modalTitle}>Detalle de pedido</h2>
-              {pedidoConfirmado.id && <p style={styles.modalSubtitle}>Pedido #{pedidoConfirmado.id}</p>}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {pedidoConfirmado.id && <p style={styles.modalSubtitle}>Pedido #{pedidoConfirmado.id}</p>}
+                {mesaActual && <span style={styles.mesaBadge}>Mesa {mesaActual}</span>}
+              </div>
             </div>
             <button onClick={handleCerrarDetallePedido} style={styles.modalCloseButton} aria-label="Minimizar detalle de pedido">
               —
@@ -347,7 +382,10 @@ const ClientHome = () => {
       {pedidoConfirmado && orderPanelMinimized && (
         <div style={styles.minimizedOrderPanel}>
           <div>
-            <strong style={{ display: 'block', marginBottom: '4px' }}>Pedido #{pedidoConfirmado.id}</strong>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+              <strong style={{ display: 'block' }}>Pedido #{pedidoConfirmado.id}</strong>
+              {mesaActual && <span style={styles.mesaBadgeSmall}>Mesa {mesaActual}</span>}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ ...styles.modalStatus, backgroundColor: getEstadoColor(pedidoConfirmado.estado), padding: '6px 10px', fontSize: '12px' }}>
                 {getEstadoLabel(pedidoConfirmado.estado)}
@@ -367,7 +405,9 @@ const ClientHome = () => {
         </div>
       )}
       <main style={styles.mainContent}>
-        <h1 style={styles.title}>Bienvenido{usuario?.name ? `, ${usuario.name}` : ''}</h1>
+        <h1 style={styles.title}>
+          Bienvenido{usuario?.name ? `, ${usuario.name}` : ''}
+        </h1>
         <p style={styles.subtitle}>Seleccioná el menú que quieras y confirmá tu pedido.</p>
 
         {loading ? (
@@ -806,6 +846,22 @@ const styles = {
     cursor: 'pointer',
     fontSize: '15px',
     fontWeight: '700',
+  },
+  mesaBadge: {
+    backgroundColor: '#ff4757',
+    color: '#fff',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+  },
+  mesaBadgeSmall: {
+    backgroundColor: '#ff4757',
+    color: '#fff',
+    padding: '1px 6px',
+    borderRadius: '4px',
+    fontSize: '10px',
+    fontWeight: 'bold',
   },
   modalActionsRow: {
     display: 'flex',

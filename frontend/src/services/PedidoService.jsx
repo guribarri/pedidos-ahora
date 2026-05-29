@@ -13,9 +13,20 @@ const getUserEmail = () => {
     }
 };
 
+const getTableHeaders = () => {
+    const headers = {};
+    const mesaId = localStorage.getItem('mesaId');
+    const sesionMesaId = localStorage.getItem('sesionMesaId');
+    
+    if (mesaId) headers['x-mesa-id'] = mesaId;
+    if (sesionMesaId) headers['x-sesion-mesa-id'] = sesionMesaId;
+    
+    return headers;
+};
+
 const createPedido = async (menusPayload, userEmail) => {
     try {
-        const headers = {};
+        const headers = { ...getTableHeaders() };
         const email = userEmail || getUserEmail();
         if (email) {
             headers['x-user-email'] = email;
@@ -33,7 +44,7 @@ const createPedido = async (menusPayload, userEmail) => {
 
 const addMenusToPedido = async (pedidoId, menusPayload, userEmail) => {
     try {
-        const headers = {};
+        const headers = { ...getTableHeaders() };
         const email = userEmail || getUserEmail();
         if (email) {
             headers['x-user-email'] = email;
@@ -51,7 +62,7 @@ const addMenusToPedido = async (pedidoId, menusPayload, userEmail) => {
 
 const getPedidoById = async (pedidoId, userEmail) => {
     try {
-        const headers = {};
+        const headers = { ...getTableHeaders() };
         const email = userEmail || getUserEmail();
         if (email) {
             headers['x-user-email'] = email;
@@ -120,4 +131,16 @@ const updatePedidoEstado = async (pedidoId, direction) => {
     }
 };
 
-export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado };
+const accederMesa = async (numero, token) => {
+    try {
+        const response = await axios.post(`${baseURL}mesas/${numero}/acceder?token=${token}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al acceder a la mesa:', error);
+        const serverMsg = error?.response?.data?.message;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Error al acceder a la mesa');
+    }
+};
+
+export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa };

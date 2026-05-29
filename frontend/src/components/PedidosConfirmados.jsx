@@ -154,79 +154,97 @@ const PedidosConfirmados = ({ onLogout }) => {
     );
   }
 
+  // Agrupar pedidos por mesa
+  const pedidosAgrupados = pedidos.reduce((groups, pedido) => {
+    const mesaKey = pedido.mesa_numero ? `Mesa ${pedido.mesa_numero}` : 'Sin Mesa';
+    if (!groups[mesaKey]) {
+      groups[mesaKey] = [];
+    }
+    groups[mesaKey].push(pedido);
+    return groups;
+  }, {});
+
   return (
     <Layout onLogout={onLogout}>
       <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
         <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
-        {pedidos.map((pedido) => (
-          <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
-            <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
-              <div style={styles.headerLeft}>
-                <strong>ID Pedido: {pedido.id}</strong>
-                <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
-                  {getEstadoLabel(pedido.estado)}
-                </span>
-              </div>
-              <div style={styles.buttonsContainer}>
-                <button
-                  onClick={() => handleEstadoChange(pedido.id, 'backward')}
-                  disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
-                  style={{
-                    ...styles.navButton,
-                    opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
-                    cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                  }}
-                  title="Retroceder estado"
-                >
-                  ←
-                </button>
-                <button
-                  onClick={() => handleEstadoChange(pedido.id, 'forward')}
-                  disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
-                  style={{
-                    ...styles.navButton,
-                    opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
-                    cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                  }}
-                  title="Avanzar estado"
-                >
-                  →
-                </button>
-              </div>
-              {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
-            </div>
-            {isMobile ? (
-              <div style={styles.mobileList}>
-                {pedido.menus && pedido.menus.map((menu, index) => (
-                  <div key={index} style={styles.mobileItem}>
-                    <div style={styles.mobileItemHeader}>
-                      <span style={styles.mobileBold}>{menu.nombre}</span>
-                      <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
+        
+        {Object.entries(pedidosAgrupados).map(([mesaLabel, pedidosDeMesa]) => (
+          <div key={mesaLabel} style={styles.tableGroup}>
+            <h3 style={styles.mesaGroupHeader}>{mesaLabel}</h3>
+            <div style={styles.groupContent}>
+              {pedidosDeMesa.map((pedido) => (
+                <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
+                  <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
+                    <div style={styles.headerLeft}>
+                      <strong>ID Pedido: {pedido.id}</strong>
+                      <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
+                        {getEstadoLabel(pedido.estado)}
+                      </span>
                     </div>
-                    <p style={styles.mobileDesc}>{menu.descripcion}</p>
+                    <div style={styles.buttonsContainer}>
+                      <button
+                        onClick={() => handleEstadoChange(pedido.id, 'backward')}
+                        disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
+                        style={{
+                          ...styles.navButton,
+                          opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
+                          cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                        }}
+                        title="Retroceder estado"
+                      >
+                        ←
+                      </button>
+                      <button
+                        onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                        disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
+                        style={{
+                          ...styles.navButton,
+                          opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
+                          cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                        }}
+                        title="Avanzar estado"
+                      >
+                        →
+                      </button>
+                    </div>
+                    {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Nombre</th>
-                    <th style={styles.th}>Descripción</th>
-                    <th style={styles.th}>Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pedido.menus && pedido.menus.map((menu, index) => (
-                    <tr key={index} style={styles.tr}>
-                      <td style={styles.td}>{menu.nombre}</td>
-                      <td style={styles.td}>{menu.descripcion}</td>
-                      <td style={styles.tdCenter}>{menu.cantidad}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  {isMobile ? (
+                    <div style={styles.mobileList}>
+                      {pedido.menus && pedido.menus.map((menu, index) => (
+                        <div key={index} style={styles.mobileItem}>
+                          <div style={styles.mobileItemHeader}>
+                            <span style={styles.mobileBold}>{menu.nombre}</span>
+                            <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
+                          </div>
+                          <p style={styles.mobileDesc}>{menu.descripcion}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th style={styles.th}>Nombre</th>
+                          <th style={styles.th}>Descripción</th>
+                          <th style={styles.th}>Cantidad</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pedido.menus && pedido.menus.map((menu, index) => (
+                          <tr key={index} style={styles.tr}>
+                            <td style={styles.td}>{menu.nombre}</td>
+                            <td style={styles.td}>{menu.descripcion}</td>
+                            <td style={styles.tdCenter}>{menu.cantidad}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -275,6 +293,28 @@ const styles = {
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.5px'
+  },
+  tableGroup: {
+    marginBottom: '24px',
+    backgroundColor: '#f8f9fa',
+    padding: '16px',
+    borderRadius: '12px',
+    border: '1px solid #e9ecef'
+  },
+  mesaGroupHeader: {
+    margin: '0 0 16px 0',
+    fontSize: '18px',
+    color: '#ff4757',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    borderBottom: '2px solid #ff4757',
+    display: 'inline-block',
+    paddingBottom: '4px'
+  },
+  groupContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
   },
   buttonsContainer: {
     display: 'flex',

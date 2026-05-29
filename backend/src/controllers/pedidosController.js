@@ -1,13 +1,19 @@
 const pool = require("../db");
 
 class PedidosController {
-    async getPedidoById(id, userEmail = null) {
+    async getPedidoById(id, userEmail = null, sesionMesaId = null) {
         try {
-            // Primero obtener el pedido básico
             const queryParams = [id];
-            let query = `SELECT p.id, p.fecha, p.estado, p.user_email FROM pedidos p WHERE p.id = $1`;
-            
-            if (userEmail) {
+            let query = `
+                SELECT p.id, p.fecha, p.estado, p.user_email,
+                       p.mesa_id, p.sesion_mesa_id, mesa.numero AS mesa_numero
+                FROM pedidos p
+                LEFT JOIN mesas mesa ON p.mesa_id = mesa.id
+                WHERE p.id = $1
+            `;
+
+            // Filtrar por email solo si no es un pedido de mesa compartido
+            if (userEmail && !sesionMesaId) {
                 query += ' AND p.user_email = $2';
                 queryParams.push(userEmail);
             }
@@ -40,10 +46,12 @@ class PedidosController {
     async create(req, res) {
         try {
             const { menus } = req.body;
-            const userEmail = req.headers['x-user-email'] || req.body.userEmail;
+            const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
+            const mesaId = req.headers['x-mesa-id'] ? parseInt(req.headers['x-mesa-id']) : null;
+            const sesionMesaId = req.headers['x-sesion-mesa-id'] ? parseInt(req.headers['x-sesion-mesa-id']) : null;
 
-            // Si no hay email, generar uno
-            if (!userEmail) {
+            // Requiere email O que sea un pedido de mesa
+            if (!userEmail && !mesaId) {
                 return res.status(400).json({ message: "El email del usuario es requerido en el header x-user-email" });
             }
 
@@ -59,8 +67,11 @@ class PedidosController {
                 }
             }
 
-            // Crear el pedido con el email del usuario
-            const result = await pool.query("INSERT INTO pedidos (user_email) VALUES ($1) RETURNING id", [userEmail]);
+            // Crear el pedido (con o sin mesa)
+            const result = await pool.query(
+                "INSERT INTO pedidos (user_email, mesa_id, sesion_mesa_id) VALUES ($1, $2, $3) RETURNING id",
+                [userEmail, mesaId, sesionMesaId]
+            );
             const pedido_id = result.rows[0].id;
 
             const insertMenusQuery = "INSERT INTO pedidos_menus (id_pedido, id_menu, cantidad, precio_unitario) VALUES ($1, $2, $3, $4)";
@@ -68,7 +79,7 @@ class PedidosController {
                 await pool.query(insertMenusQuery, [pedido_id, menu.menu_id, menu.cantidad, menu.precio_unitario]);
             }
 
-            const pedido = await this.getPedidoById(pedido_id, userEmail);
+            const pedido = await this.getPedidoById(pedido_id, userEmail, sesionMesaId);
             res.status(201).json({ message: "Pedido confirmado con exito", pedido });
         } catch (error) {
             console.error('Error al crear pedido:', error);
@@ -114,8 +125,9 @@ class PedidosController {
         try {
             const { id } = req.params;
             const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
+            const sesionMesaId = req.headers['x-sesion-mesa-id'] ? parseInt(req.headers['x-sesion-mesa-id']) : null;
 
-            const pedido = await this.getPedidoById(id, userEmail);
+            const pedido = await this.getPedidoById(id, userEmail, sesionMesaId);
             if (!pedido) {
                 return res.status(404).json({ message: "Pedido no encontrado" });
             }
@@ -132,18 +144,25 @@ class PedidosController {
             const { id } = req.params;
             const { menus } = req.body;
             const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
+            const sesionMesaId = req.headers['x-sesion-mesa-id'] ? parseInt(req.headers['x-sesion-mesa-id']) : null;
 
             if (!menus || menus.length === 0) {
                 return res.status(400).json({ message: "El pedido debe contener al menos un menú" });
             }
 
-            const pedidoResult = await pool.query("SELECT user_email FROM pedidos WHERE id = $1", [id]);
+            const pedidoResult = await pool.query(
+                "SELECT user_email, sesion_mesa_id FROM pedidos WHERE id = $1", [id]
+            );
             if (pedidoResult.rows.length === 0) {
                 return res.status(404).json({ message: "Pedido no encontrado" });
             }
 
             const pedidoOwnerEmail = pedidoResult.rows[0].user_email;
-            if (pedidoOwnerEmail && pedidoOwnerEmail !== userEmail) {
+            const pedidoSesionId = pedidoResult.rows[0].sesion_mesa_id;
+
+            // Permitir acceso si: es de mesa con sesion correcta, o es el dueño por email
+            const esDeMesa = pedidoSesionId && sesionMesaId && pedidoSesionId === sesionMesaId;
+            if (!esDeMesa && pedidoOwnerEmail && pedidoOwnerEmail !== userEmail) {
                 return res.status(403).json({ message: "No tienes permiso para modificar este pedido" });
             }
 
@@ -167,7 +186,7 @@ class PedidosController {
                 }
             }
 
-            const pedido = await this.getPedidoById(id, userEmail);
+            const pedido = await this.getPedidoById(id, userEmail, sesionMesaId);
             res.json({ message: "Menús agregados al pedido", pedido });
         } catch (error) {
             res.status(500).json({ message: "Error al actualizar el pedido", error: error.message });
@@ -178,8 +197,9 @@ class PedidosController {
     async getAll(req, res) {
         try {
             const result = await pool.query(`
-                SELECT p.id, p.fecha, p.estado, p.user_email
+                SELECT p.id, p.fecha, p.estado, p.user_email, p.mesa_id, p.sesion_mesa_id, m.numero as mesa_numero
                 FROM pedidos p
+                LEFT JOIN mesas m ON p.mesa_id = m.id
                 ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC
             `);
 

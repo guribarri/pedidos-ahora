@@ -28,6 +28,10 @@ function AppRoutes() {
                 path="/"
                 element={<ClientHome />}
             />
+            <Route
+                path="/mesa/:numero"
+                element={<ClientHome />}
+            />
 
             <Route
                 path="/login"

@@ -7,6 +7,8 @@ const MenuController = require('./src/controllers/menuController');
 const menuController = new MenuController();
 const PedidosController = require('./src/controllers/pedidosController');
 const pedidosController = new PedidosController();
+const MesasController = require('./src/controllers/mesasController');
+const mesasController = new MesasController();
 const { isAdmin, isAuthenticated } = require('./src/middleware/authMiddleware');
 
 // Configurar CORS
@@ -43,6 +45,12 @@ app.delete("/menus/:id", isAdmin, menuController.delete.bind(menuController));
 
 // PATCH alternar visibilidad (solo admin)
 app.patch("/menus/:id/visibility", isAdmin, menuController.toggleVisibility.bind(menuController));
+
+// Mesas Routes
+// POST acceder a mesa por QR (público)
+app.post("/mesas/:numero/acceder", mesasController.accederMesa.bind(mesasController));
+// GET todas las mesas (solo admin)
+app.get("/mesas", isAdmin, mesasController.getAllMesas.bind(mesasController));
 
 //POST crear pedido (público)
 app.post("/pedidos", pedidosController.create.bind(pedidosController));

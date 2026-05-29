@@ -53,10 +53,6 @@ const Home = ({ onLogout }) => {
       .catch((err) => window.alert(err.message));
   };
 
-  const handleToggle = (id, currentVisible) => {
-    window.alert('Funcionalidad temporalmente no disponible.');
-  };
-
   const handleEdit = (id) => {
     const m = menus.find((x) => x.id === id);
     setMenuToEdit(m);
@@ -111,9 +107,6 @@ const Home = ({ onLogout }) => {
               </div>
             )}
           </section>
-
-
-
         </main>
       </div>
       {modalOpen && (
@@ -156,85 +149,11 @@ const styles = {
     backgroundColor: '#f8f9fa',
     margin: 0,
   },
-  navbar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '0 40px',
-    height: '70px',
-    backgroundColor: '#ffffff',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-  },
-  brand: {
-    fontSize: '24px',
-    fontWeight: '800',
-    letterSpacing: '-1px',
-    color: '#2d3436',
-    cursor: 'pointer',
-  },
-  navActions: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '25px',
-  },
-  addBtn: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '8px 16px',
-    borderRadius: '20px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: '0.3s',
-  },
-  userSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '15px',
-    borderLeft: '1px solid #eee',
-    paddingLeft: '20px',
-  },
-  userBadge: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    backgroundColor: '#f1f2f6',
-    padding: '5px 12px',
-    borderRadius: '15px',
-  },
-  userIcon: {
-    fontSize: '18px',
-  },
-  userName: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#2f3542',
-  },
-  logoutBtn: {
-    backgroundColor: 'transparent',
-    color: '#ff4757',
-    border: '1px solid #ff4757',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
   mainContent: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     paddingTop: '40px',
-  },
-  heroCard: {
-    backgroundColor: 'white',
-    padding: '24px 28px',
-    borderRadius: '12px',
-    boxShadow: '0 6px 20px rgba(0,0,0,0.04)',
-    textAlign: 'left',
-    maxWidth: '1100px',
-    width: '95%',
-    marginBottom: '18px',
   },
   title: {
     fontSize: '28px',
@@ -250,10 +169,8 @@ const styles = {
     height: '1px',
     backgroundColor: '#eee',
     margin: '20px 0',
-  },
-  info: {
-    fontSize: '14px',
-    color: '#a4b0be',
+    width: '95%',
+    maxWidth: '1100px',
   },
   listWrapper: {
     marginTop: '6px',
