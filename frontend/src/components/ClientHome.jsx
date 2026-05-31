@@ -66,7 +66,7 @@ const ClientHome = () => {
           localStorage.setItem('mesaId', data.mesaId);
           localStorage.setItem('sesionMesaId', data.sesionId);
           localStorage.setItem('mesaNumero', data.mesaNumero);
-          
+
           if (data.currentPedidoId) {
             setCurrentPedidoId(data.currentPedidoId);
             setOrderPanelVisible(true);
@@ -234,6 +234,17 @@ const ClientHome = () => {
     }
   };
 
+  const handlePedirCuenta = async () => {
+    try {
+
+      await PedidoService.updatePedidoEstado(pedidoConfirmado.id, 'forward');
+
+      navigate('/gracias', { replace: true });
+    } catch (err) {
+      alert("Hubo un error al solicitar la cuenta. Por favor, avise al mozo.");
+    }
+  };
+
   const handlConfirmarPedido = async () => {
     if (selectedMenus.length === 0) return;
     setIsSubmitting(true);
@@ -306,8 +317,8 @@ const ClientHome = () => {
               notificationType === 'error'
                 ? 'rgba(255,69,58,0.95)'
                 : notificationType === 'info'
-                ? 'rgba(30,144,255,0.95)'
-                : 'rgba(40,167,69,0.95)'
+                  ? 'rgba(30,144,255,0.95)'
+                  : 'rgba(40,167,69,0.95)'
           }}
         >
           {notification}
@@ -355,10 +366,27 @@ const ClientHome = () => {
               Minimizar
             </button>
           </div>
+          <div style={{ marginTop: '16px', width: '100%' }}>
+            <button
+              onClick={handlePedirCuenta}
+              disabled={
+                pedidoConfirmado.estado === 'confirmado' ||
+                pedidoConfirmado.estado === 'en_preparacion'
+              }
+              style={{
+                ...styles.cuentaBtn,
+                ...((pedidoConfirmado.estado === 'confirmado' || pedidoConfirmado.estado === 'en_preparacion')
+                  ? styles.cuentaBtnDisabled
+                  : {})
+              }}
+            >
+              Pedir cuenta
+            </button>
+          </div>
         </div>
       )}
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : isTablet ? '0 25px' : '0 40px', height: isMobile ? '50px' : '60px' }}>
-        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate('/') }>
+        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate('/')}>
           <span style={{ color: '#2d3436' }}>
             P{!isMobile && 'edidos'}
           </span>
@@ -419,8 +447,8 @@ const ClientHome = () => {
               gridTemplateColumns: isMobile
                 ? '1fr'
                 : isTablet
-                ? 'repeat(2, 1fr)'
-                : 'repeat(auto-fill, minmax(420px, 1fr))',
+                  ? 'repeat(2, 1fr)'
+                  : 'repeat(auto-fill, minmax(420px, 1fr))',
             }}
           >
             {menus.length === 0 && <p>No hay menús disponibles ahora.</p>}
@@ -479,7 +507,7 @@ const ClientHome = () => {
           }}>
             <h2 style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: isMobile ? '12px' : '15px' }}>Menús Elegidos</h2>
             <div style={{ display: 'flex', gap: '10px', marginBottom: isMobile ? '15px' : '20px', flexDirection: isMobile ? 'column' : 'row' }}>
-              <button 
+              <button
                 onClick={() => handlConfirmarPedido()}
                 disabled={isSubmitting}
                 style={{
@@ -497,8 +525,8 @@ const ClientHome = () => {
               >
                 {isSubmitting ? 'Confirmando...' : 'Confirmar pedido'}
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => handleCancel()}
                 style={{
                   backgroundColor: 'red',
@@ -515,37 +543,37 @@ const ClientHome = () => {
                 Cancelar pedido
               </button>
             </div>
-          {selectedMenus.map((menu) => (
-            <div key={menu.id} style={styles.sidebarItem}>
-              <h3>{menu.nombre}</h3>
-              <p>{menu.descripcion}</p>
-              <p>Precio: ${Number(menu.precio).toFixed(2)}</p>
-              <div style={styles.quantityControl}>
-                <button
-                  onClick={() => handleDecrement(menu.id, menu.cantidad ?? 1)}
-                  style={styles.quantityButton}
-                  aria-label={`Disminuir cantidad de ${menu.nombre}`}
-                >
-                  -
-                </button>
-                <span style={styles.quantityValue}>{menu.cantidad ?? 1}</span>
-                <button
-                  onClick={() => handleIncrement(menu.id, menu.cantidad ?? 1)}
-                  style={styles.quantityButton}
-                  aria-label={`Aumentar cantidad de ${menu.nombre}`}
-                >
-                  +
-                </button>
+            {selectedMenus.map((menu) => (
+              <div key={menu.id} style={styles.sidebarItem}>
+                <h3>{menu.nombre}</h3>
+                <p>{menu.descripcion}</p>
+                <p>Precio: ${Number(menu.precio).toFixed(2)}</p>
+                <div style={styles.quantityControl}>
+                  <button
+                    onClick={() => handleDecrement(menu.id, menu.cantidad ?? 1)}
+                    style={styles.quantityButton}
+                    aria-label={`Disminuir cantidad de ${menu.nombre}`}
+                  >
+                    -
+                  </button>
+                  <span style={styles.quantityValue}>{menu.cantidad ?? 1}</span>
+                  <button
+                    onClick={() => handleIncrement(menu.id, menu.cantidad ?? 1)}
+                    style={styles.quantityButton}
+                    aria-label={`Aumentar cantidad de ${menu.nombre}`}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+            ))}
+            <div style={styles.sidebarTotal}>
+              <span style={styles.sidebarTotalLabel}>Total:</span>
+              <span style={styles.sidebarTotalAmount}>
+                ${selectedMenus.reduce((sum, menu) => sum + (Number(menu.precio) * (menu.cantidad ?? 1)), 0).toFixed(2)}
+              </span>
             </div>
-          ))}
-          <div style={styles.sidebarTotal}>
-            <span style={styles.sidebarTotalLabel}>Total:</span>
-            <span style={styles.sidebarTotalAmount}>
-              ${selectedMenus.reduce((sum, menu) => sum + (Number(menu.precio) * (menu.cantidad ?? 1)), 0).toFixed(2)}
-            </span>
-          </div>
-        </aside>
+          </aside>
         </>
       )}
     </div>
@@ -906,6 +934,24 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
   },
+  cuentaBtn: {
+    width: '100%',
+    backgroundColor: '#007bff', // Color principal de tu app
+    color: '#ffffff',
+    border: 'none',
+    padding: '14px',
+    borderRadius: '10px',
+    fontSize: '16px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s, opacity 0.2s',
+    boxSizing: 'border-box',
+  },
+  cuentaBtnDisabled: {
+    backgroundColor: '#dfe6e9', // Gris apagado
+    color: '#b2bec3',
+    cursor: 'not-allowed',
+  }
 };
 
 export default ClientHome;

@@ -6,6 +6,7 @@ import Home from './components/Home';
 import MenuForm from './components/MenuForm';
 import PedidosConfirmados from './components/PedidosConfirmados';
 import Login from './components/Login';
+import GraciasPage from './components/GraciasPage.jsx';
 
 function AppRoutes() {
     const { usuario, logout, loading } = useUserContext();
@@ -32,7 +33,7 @@ function AppRoutes() {
                 path="/mesa/:numero"
                 element={<ClientHome />}
             />
-
+            <Route path="/gracias" element={<GraciasPage />} />
             <Route
                 path="/login"
                 element={usuario?.email === 'admin@pedidiosahora.com' ? <Navigate to="/admin" /> : <Login onLoginExitoso={handleLoginExitoso} />}
