@@ -19,7 +19,7 @@ class PedidosController {
             }
 
             const pedidoResult = await pool.query(query, queryParams);
-            
+
             if (pedidoResult.rows.length === 0) {
                 return null;
             }
@@ -109,7 +109,7 @@ class PedidosController {
                     JOIN menus m ON pm.id_menu = m.id
                     WHERE pm.id_pedido = $1
                 `, [pedido.id]);
-                
+
                 pedido.menus = menusResult.rows;
                 return pedido;
             }));
@@ -193,17 +193,17 @@ class PedidosController {
         }
     }
 
-    //GET all pedidos
     async getAll(req, res) {
         try {
             const result = await pool.query(`
                 SELECT p.id, p.fecha, p.estado, p.user_email, p.mesa_id, p.sesion_mesa_id, m.numero as mesa_numero
                 FROM pedidos p
                 LEFT JOIN mesas m ON p.mesa_id = m.id
+                INNER JOIN sesiones_mesas sm ON p.sesion_mesa_id = sm.id
+                WHERE sm.estado = 'activa'
                 ORDER BY CASE WHEN p.estado = 'entregado' THEN 1 ELSE 0 END, p.fecha DESC
             `);
 
-            // Obtener menús para cada pedido
             const pedidos = await Promise.all(result.rows.map(async (pedido) => {
                 const menusResult = await pool.query(`
                     SELECT pm.id_menu, pm.cantidad, pm.precio_unitario, m.nombre, m.descripcion
@@ -211,7 +211,7 @@ class PedidosController {
                     JOIN menus m ON pm.id_menu = m.id
                     WHERE pm.id_pedido = $1
                 `, [pedido.id]);
-                
+
                 pedido.menus = menusResult.rows;
                 return pedido;
             }));
@@ -252,7 +252,7 @@ class PedidosController {
 
             // Lógica de transición de estados
             if (direction === 'forward') {
-                switch(estadoActual) {
+                switch (estadoActual) {
                     case 'confirmado':
                         nuevoEstado = 'en_preparacion';
                         break;
@@ -260,12 +260,15 @@ class PedidosController {
                         nuevoEstado = 'entregado';
                         break;
                     case 'entregado':
-                        return res.status(400).json({ message: "No se puede avanzar desde estado Entregado" });
+                        nuevoEstado = 'cuenta_pedida'; // <-- ¡AHORA SÍ PERMITIMOS AVANZAR A LA CUENTA!
+                        break;
+                    case 'cuenta_pedida':
+                        return res.status(400).json({ message: "La cuenta ya fue solicitada para este pedido" });
                     default:
                         return res.status(400).json({ message: "Estado inválido" });
                 }
             } else {
-                switch(estadoActual) {
+                switch (estadoActual) {
                     case 'confirmado':
                         return res.status(400).json({ message: "No se puede retroceder desde estado Confirmado" });
                     case 'en_preparacion':
@@ -273,6 +276,9 @@ class PedidosController {
                         break;
                     case 'entregado':
                         nuevoEstado = 'en_preparacion';
+                        break;
+                    case 'cuenta_pedida':
+                        nuevoEstado = 'entregado'; // <-- POR SI EL MOZO COLO REBOTA LA CUENTA POR ERROR
                         break;
                     default:
                         return res.status(400).json({ message: "Estado inválido" });

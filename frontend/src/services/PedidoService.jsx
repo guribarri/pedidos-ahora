@@ -17,10 +17,10 @@ const getTableHeaders = () => {
     const headers = {};
     const mesaId = localStorage.getItem('mesaId');
     const sesionMesaId = localStorage.getItem('sesionMesaId');
-    
+
     if (mesaId) headers['x-mesa-id'] = mesaId;
     if (sesionMesaId) headers['x-sesion-mesa-id'] = sesionMesaId;
-    
+
     return headers;
 };
 
@@ -143,4 +143,17 @@ const accederMesa = async (numero, token) => {
     }
 };
 
-export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa };
+const cerrarMesa = async (numeroMesa) => {
+    try {
+        const userEmail = getUserEmail();
+        const response = await axios.post(`${baseURL}mesas/${numeroMesa}/cerrar`, {}, {
+            headers: { 'x-user-email': userEmail }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error al cerrar la mesa:', error);
+        throw Error(error?.response?.data?.message || 'Error al cerrar la mesa');
+    }
+};
+
+export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa, cerrarMesa };

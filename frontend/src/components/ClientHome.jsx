@@ -234,6 +234,17 @@ const ClientHome = () => {
     }
   };
 
+  const handlePedirCuenta = async () => {
+    try {
+
+      await PedidoService.updatePedidoEstado(pedidoConfirmado.id, 'forward');
+
+      navigate('/gracias', { replace: true });
+    } catch (err) {
+      alert("Hubo un error al solicitar la cuenta. Por favor, avise al mozo.");
+    }
+  };
+
   const handlConfirmarPedido = async () => {
     if (selectedMenus.length === 0) return;
     setIsSubmitting(true);
@@ -357,7 +368,7 @@ const ClientHome = () => {
           </div>
           <div style={{ marginTop: '16px', width: '100%' }}>
             <button
-              onClick={() => navigate('/gracias')}
+              onClick={handlePedirCuenta}
               disabled={
                 pedidoConfirmado.estado === 'confirmado' ||
                 pedidoConfirmado.estado === 'en_preparacion'

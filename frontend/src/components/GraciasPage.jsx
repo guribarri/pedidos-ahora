@@ -1,6 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 const GraciasPage = () => {
+
+    useEffect(() => {
+        localStorage.removeItem('mesaId');
+        localStorage.removeItem('sesionMesaId');
+        localStorage.removeItem('currentPedidoId'); // Si es que guardaban este también
+
+        console.log('Sesión local de la mesa destruida con éxito.');
+    }, []);
+
     return (
         <div style={styles.container}>
             <div style={styles.card}>

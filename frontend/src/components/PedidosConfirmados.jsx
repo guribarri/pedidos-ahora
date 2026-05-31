@@ -11,30 +11,25 @@ const PedidosConfirmados = ({ onLogout }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [updatingId, setUpdatingId] = useState(null);
   const { usuario } = useUserContext();
+  const [mesasCerradas, setMesasCerradas] = useState([]);
 
   const getEstadoColor = (estado) => {
-    switch(estado) {
-      case 'confirmado':
-        return '#ff4757';
-      case 'en_preparacion':
-        return '#ffa502';
-      case 'entregado':
-        return '#2ed573';
-      default:
-        return '#999';
+    switch (estado) {
+      case 'confirmado': return '#ff4757';
+      case 'en_preparacion': return '#ffa502';
+      case 'entregado': return '#2ed573';
+      case 'cuenta_pedida': return '#1e90ff';
+      default: return '#999';
     }
   };
 
   const getEstadoLabel = (estado) => {
-    switch(estado) {
-      case 'confirmado':
-        return 'Confirmado';
-      case 'en_preparacion':
-        return 'En Preparación';
-      case 'entregado':
-        return 'Entregado';
-      default:
-        return estado;
+    switch (estado) {
+      case 'confirmado': return 'Confirmado';
+      case 'en_preparacion': return 'En Preparación';
+      case 'entregado': return 'Entregado';
+      case 'cuenta_pedida': return 'Cuenta Pedida 💰';
+      default: return estado;
     }
   };
 
@@ -113,6 +108,28 @@ const PedidosConfirmados = ({ onLogout }) => {
     }
   };
 
+  const handleCerrarMesa = async (mesaLabel, pedidosDeMesa) => {
+    const numeroMesa = mesaLabel.replace('Mesa ', '');
+
+    if (!window.confirm(`¿Estás seguro de que querés cerrar la ${mesaLabel}?`)) return;
+
+    // 1. Agregamos la mesa al "candado" para que el setInterval no la vuelva a meter
+    setMesasCerradas(prev => [...prev, mesaLabel]);
+
+    // 2. La borramos visualmente en el acto
+    setPedidos(prevPedidos => prevPedidos.filter(p => `Mesa ${p.mesa_numero}` !== mesaLabel));
+
+    try {
+      await PedidoService.cerrarMesa(numeroMesa);
+      console.log(`${mesaLabel} cerrada en el servidor con éxito.`);
+    } catch (err) {
+      console.error("Error por detrás en el backend:", err.message);
+      // Si falló el backend, quitamos el candado para que vuelva a aparecer y el mozo sepa que no se guardó
+      setMesasCerradas(prev => prev.filter(m => m !== mesaLabel));
+      alert(`No se pudo cerrar en el servidor: ${err.message}`);
+    }
+  };
+
   if (!usuario || !usuario.email) {
     return (
       <Layout onLogout={onLogout}>
@@ -168,89 +185,116 @@ const PedidosConfirmados = ({ onLogout }) => {
     <Layout onLogout={onLogout}>
       <div style={{ ...styles.container, padding: isMobile ? '15px' : '20px' }}>
         <h2 style={{ ...styles.title, fontSize: isMobile ? '20px' : '22px' }}>Pedidos Confirmados</h2>
-        
-        {Object.entries(pedidosAgrupados).map(([mesaLabel, pedidosDeMesa]) => (
-          <div key={mesaLabel} style={styles.tableGroup}>
-            <h3 style={styles.mesaGroupHeader}>{mesaLabel}</h3>
-            <div style={styles.groupContent}>
-              {pedidosDeMesa.map((pedido) => (
-                <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
-                  <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
-                    <div style={styles.headerLeft}>
-                      <strong>ID Pedido: {pedido.id}</strong>
-                      <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
-                        {getEstadoLabel(pedido.estado)}
-                      </span>
+
+        {Object.entries(pedidosAgrupados)
+          .filter(([mesaLabel]) => !mesasCerradas.includes(mesaLabel))
+          .map(([mesaLabel, pedidosDeMesa]) => (
+            <div key={mesaLabel} style={styles.tableGroup}>
+
+              {/* HEADER DE GRUPO CON BOTÓN CONDICIONAL */}
+              <div style={styles.mesaHeaderContainer}>
+                <h3 style={styles.mesaGroupHeader}>{mesaLabel}</h3>
+                {mesaLabel !== 'Sin Mesa' && (
+                  <button
+                    onClick={() => handleCerrarMesa(mesaLabel, pedidosDeMesa)}
+                    disabled={!pedidosDeMesa.some(p => p.estado === 'cuenta_pedida')}
+                    style={{
+                      ...styles.cerrarMesaBtn,
+                      ...(!pedidosDeMesa.some(p => p.estado === 'cuenta_pedida') ? styles.cerrarMesaBtnDisabled : {})
+                    }}
+                    title={!pedidosDeMesa.some(p => p.estado === 'cuenta_pedida') ? "No se puede cerrar la mesa porque el cliente no pidió la cuenta" : "Cerrar mesa y liberar"}
+                  >
+                    Cerrar Mesa
+                  </button>
+                )}
+              </div>
+
+              <div style={styles.groupContent}>
+                {pedidosDeMesa.map((pedido) => (
+                  <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
+                    <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
+                      <div style={styles.headerLeft}>
+                        <strong>ID Pedido: {pedido.id}</strong>
+                        <span style={{ ...styles.estadoLabel, backgroundColor: getEstadoColor(pedido.estado) }}>
+                          {getEstadoLabel(pedido.estado)}
+                        </span>
+                      </div>
+
+                      {/* CONTENEDOR DE BOTONES DE TRANSICIÓN DE ESTADO */}
+                      <div style={styles.buttonsContainer}>
+                        {/* BOTÓN RETROCEDER (←) */}
+                        <button
+                          onClick={() => handleEstadoChange(pedido.id, 'backward')}
+                          disabled={pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id}
+                          style={{
+                            ...styles.navButton,
+                            opacity: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 0.5 : 1,
+                            cursor: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                          }}
+                          title={pedido.estado === 'cuenta_pedida' ? "No se puede retroceder un pedido con cuenta pedida" : "Retroceder estado"}
+                        >
+                          ←
+                        </button>
+
+                        {/* BOTÓN AVANZAR (→) */}
+                        <button
+                          onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                          disabled={pedido.estado === 'entregado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id}
+                          style={{
+                            ...styles.navButton,
+                            opacity: (pedido.estado === 'entregado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 0.5 : 1,
+                            cursor: (pedido.estado === 'entregado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                          }}
+                          title={pedido.estado === 'cuenta_pedida' ? "La cuenta ya fue solicitada" : "Avanzar estado"}
+                        >
+                          →
+                        </button>
+                      </div>
+
+                      {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
                     </div>
-                    <div style={styles.buttonsContainer}>
-                      <button
-                        onClick={() => handleEstadoChange(pedido.id, 'backward')}
-                        disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
-                        style={{
-                          ...styles.navButton,
-                          opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
-                          cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                        }}
-                        title="Retroceder estado"
-                      >
-                        ←
-                      </button>
-                      <button
-                        onClick={() => handleEstadoChange(pedido.id, 'forward')}
-                        disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
-                        style={{
-                          ...styles.navButton,
-                          opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
-                          cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                        }}
-                        title="Avanzar estado"
-                      >
-                        →
-                      </button>
-                    </div>
-                    {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
-                  </div>
-                  {isMobile ? (
-                    <div style={styles.mobileList}>
-                      {pedido.menus && pedido.menus.map((menu, index) => (
-                        <div key={index} style={styles.mobileItem}>
-                          <div style={styles.mobileItemHeader}>
-                            <span style={styles.mobileBold}>{menu.nombre}</span>
-                            <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
-                          </div>
-                          <p style={styles.mobileDesc}>{menu.descripcion}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <table style={styles.table}>
-                      <thead>
-                        <tr>
-                          <th style={styles.th}>Nombre</th>
-                          <th style={styles.th}>Descripción</th>
-                          <th style={styles.th}>Cantidad</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+
+                    {isMobile ? (
+                      <div style={styles.mobileList}>
                         {pedido.menus && pedido.menus.map((menu, index) => (
-                          <tr key={index} style={styles.tr}>
-                            <td style={styles.td}>{menu.nombre}</td>
-                            <td style={styles.td}>{menu.descripcion}</td>
-                            <td style={styles.tdCenter}>{menu.cantidad}</td>
-                          </tr>
+                          <div key={index} style={styles.mobileItem}>
+                            <div style={styles.mobileItemHeader}>
+                              <span style={styles.mobileBold}>{menu.nombre}</span>
+                              <span style={styles.mobileQuantity}>Qty: {menu.cantidad}</span>
+                            </div>
+                            <p style={styles.mobileDesc}>{menu.descripcion}</p>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              ))}
+                      </div>
+                    ) : (
+                      <table style={styles.table}>
+                        <thead>
+                          <tr>
+                            <th style={styles.th}>Nombre</th>
+                            <th style={styles.th}>Descripción</th>
+                            <th style={styles.th}>Cantidad</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pedido.menus && pedido.menus.map((menu, index) => (
+                            <tr key={index} style={styles.tr}>
+                              <td style={styles.td}>{menu.nombre}</td>
+                              <td style={styles.td}>{menu.descripcion}</td>
+                              <td style={styles.tdCenter}>{menu.cantidad}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </Layout>
   );
-};
+}
 
 const styles = {
   container: {
@@ -394,6 +438,32 @@ const styles = {
     fontSize: '12px',
     color: '#666',
     margin: '0'
+  },
+  mesaHeaderContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: '10px',
+    borderBottom: '2px solid #f1f2f6',
+    marginBottom: '15px'
+  },
+  cerrarMesaBtn: {
+    backgroundColor: '#ff4757', // Rojo para acción destructiva/cierre
+    color: '#ffffff',
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+    boxShadow: '0 2px 5px rgba(255, 71, 87, 0.2)',
+  },
+  cerrarMesaBtnDisabled: {
+    backgroundColor: '#dfe6e9',
+    color: '#b2bec3',
+    cursor: 'not-allowed',
+    boxShadow: 'none',
   }
 };
 

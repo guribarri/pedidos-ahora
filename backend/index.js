@@ -49,6 +49,8 @@ app.patch("/menus/:id/visibility", isAdmin, menuController.toggleVisibility.bind
 // Mesas Routes
 // POST acceder a mesa por QR (público)
 app.post("/mesas/:numero/acceder", mesasController.accederMesa.bind(mesasController));
+// POST cerrar mesa y finalizar sesión (solo admin)
+app.post("/mesas/:numero/cerrar", isAdmin, mesasController.cerrarMesa.bind(mesasController));
 // GET todas las mesas (solo admin)
 app.get("/mesas", isAdmin, mesasController.getAllMesas.bind(mesasController));
 
