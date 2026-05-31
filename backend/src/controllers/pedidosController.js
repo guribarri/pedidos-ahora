@@ -244,7 +244,8 @@ class PedidosController {
             const { estado: estadoActual, user_email: pedidoOwnerEmail } = pedidoResult.rows[0];
 
             // Verificar que el usuario sea propietario del pedido o admin
-            if (pedidoOwnerEmail && pedidoOwnerEmail !== userEmail) {
+            const isAdminUser = userEmail === 'admin@pedidiosahora.com';
+            if (pedidoOwnerEmail && pedidoOwnerEmail !== userEmail && !isAdminUser) {
                 return res.status(403).json({ message: "No tienes permiso para actualizar este pedido" });
             }
 

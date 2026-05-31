@@ -13,7 +13,7 @@ const { isAdmin, isAuthenticated } = require('./src/middleware/authMiddleware');
 
 // Configurar CORS
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'http://localhost:3000' : true,
+  origin: true, // Esto permitirá peticiones tanto desde localhost como desde la IP del celular
   credentials: true,
 }));
 

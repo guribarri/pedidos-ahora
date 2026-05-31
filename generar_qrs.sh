@@ -28,7 +28,7 @@ mesas=(
     ["07"]="m7-qr-g1y6n4s8"
     ["08"]="m8-qr-h5w2x9r3"
     ["09"]="m9-qr-i8q4j7v1"
-    ["10"]="j3t5b2n9"
+    ["10"]="m10-qr-j3t5b2n9"
 )
 
 # Descargar cada QR
