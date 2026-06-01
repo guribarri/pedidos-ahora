@@ -135,17 +135,6 @@ const ClientHome = () => {
     setSidebarVisible(false);
   };
 
-  const handleAgregarOtroMenu = () => {
-    if (!currentPedidoId) {
-      return;
-    }
-
-    setSidebarVisible(true);
-    setOrderPanelVisible(true);
-    setOrderPanelMinimized(false);
-    showNotification('Seleccioná otro menú para agregar al pedido actual', 'info');
-  };
-
   const handleMinimizeDetallePedido = () => {
     setOrderPanelVisible(false);
     setOrderPanelMinimized(true);
@@ -259,22 +248,11 @@ const ClientHome = () => {
       let response;
       let successMessage = 'Pedido confirmado correctamente';
 
+      response = await PedidoService.createPedido(menusPayload, userEmail);
       if (currentPedidoId) {
-        try {
-          response = await PedidoService.addMenusToPedido(currentPedidoId, menusPayload, userEmail);
-          successMessage = 'Menú agregado al pedido existente';
-        } catch (err) {
-          if (err.message && (err.message.includes('no encontrado') || err.message.includes('404') || err.message.includes('Not Found'))) {
-            console.log('El pedido actual no se encuentra en el servidor. Creando uno nuevo...');
-            localStorage.removeItem('currentPedidoId');
-            response = await PedidoService.createPedido(menusPayload, userEmail);
-            successMessage = 'Pedido confirmado correctamente';
-          } else {
-            throw err;
-          }
-        }
+        successMessage = 'Se creó un nuevo pedido; no se agregó al pedido en curso';
       } else {
-        response = await PedidoService.createPedido(menusPayload, userEmail);
+        successMessage = 'Pedido confirmado correctamente';
       }
 
       const pedido = response?.pedido || response;
@@ -359,9 +337,6 @@ const ClientHome = () => {
             ))}
           </div>
           <div style={styles.modalActionsRow}>
-            <button onClick={handleAgregarOtroMenu} style={{ ...styles.modalSecondaryButton, marginRight: '12px' }}>
-              Agregar otro menú
-            </button>
             <button onClick={handleCerrarDetallePedido} style={styles.modalActionButton}>
               Minimizar
             </button>
