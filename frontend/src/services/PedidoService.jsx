@@ -156,4 +156,21 @@ const cerrarMesa = async (numeroMesa) => {
     }
 };
 
-export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa, cerrarMesa };
+const getPedidosBySession = async (sesionMesaId) => {
+    try {
+        const headers = { ...getTableHeaders() };
+        if (sesionMesaId) {
+            headers['x-sesion-mesa-id'] = sesionMesaId;
+        }
+
+        const response = await axios.get(`${baseURL}pedidos/sesion`, { headers });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching session pedidos:', error);
+        const serverMsg = error?.response?.data?.message || error?.response?.data?.error;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Hubo un error al obtener los pedidos de la sesión');
+    }
+};
+
+export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa, cerrarMesa, getPedidosBySession };

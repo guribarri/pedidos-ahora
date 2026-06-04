@@ -13,18 +13,37 @@ const ClientHome = () => {
   const [selectedMenus, setSelectedMenus] = useState([]);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pedidoConfirmado, setPedidoConfirmado] = useState(null);
-  const [currentPedidoId, setCurrentPedidoId] = useState(() => {
-    const saved = localStorage.getItem('currentPedidoId');
-    return saved ? Number(saved) : null;
-  });
-  const [orderPanelVisible, setOrderPanelVisible] = useState(() => localStorage.getItem('orderPanelVisible') === 'true');
-  const [orderPanelMinimized, setOrderPanelMinimized] = useState(() => localStorage.getItem('orderPanelMinimized') === 'true');
-  const [mesaActual, setMesaActual] = useState(() => {
-    const saved = localStorage.getItem('mesaNumero');
-    return saved ? Number(saved) : null;
-  });
+  const [pedidosConfirmados, setPedidosConfirmados] = useState([]);
   const { numero } = useParams();
+  
+  const getInitialMesaNumero = () => {
+    return numero || localStorage.getItem('ultimoMesaNumero') || localStorage.getItem('mesaNumero') || null;
+  };
+
+  const [mesaActual, setMesaActual] = useState(() => {
+    const mesaNum = getInitialMesaNumero();
+    return mesaNum ? Number(mesaNum) : null;
+  });
+  const [currentPedidoId, setCurrentPedidoId] = useState(() => {
+    const mesaNum = getInitialMesaNumero();
+    if (!mesaNum) return null;
+    const saved = localStorage.getItem(`currentPedidoId_mesa_${mesaNum}`);
+    return saved ? Number(saved) : null;
+  });
+  const [orderPanelVisible, setOrderPanelVisible] = useState(() => {
+    const mesaNum = getInitialMesaNumero();
+    if (!mesaNum) return false;
+    return localStorage.getItem(`orderPanelVisible_mesa_${mesaNum}`) === 'true';
+  });
+  const [orderPanelMinimized, setOrderPanelMinimized] = useState(() => {
+    const mesaNum = getInitialMesaNumero();
+    if (!mesaNum) return false;
+    return localStorage.getItem(`orderPanelMinimized_mesa_${mesaNum}`) === 'true';
+  });
+  const [sesionMesaId, setSesionMesaId] = useState(() => {
+    const mesaNum = getInitialMesaNumero();
+    return mesaNum ? localStorage.getItem(`sesionMesaId_mesa_${mesaNum}`) : null;
+  });
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [notification, setNotification] = useState(null);
@@ -63,13 +82,25 @@ const ClientHome = () => {
         try {
           const data = await PedidoService.accederMesa(numero, token);
           setMesaActual(data.mesaNumero);
+          
+          // Guardar tanto en claves genéricas como específicas de mesa
+          localStorage.setItem(`mesaId_mesa_${data.mesaNumero}`, data.mesaId);
+          localStorage.setItem(`sesionMesaId_mesa_${data.mesaNumero}`, data.sesionId);
           localStorage.setItem('mesaId', data.mesaId);
           localStorage.setItem('sesionMesaId', data.sesionId);
           localStorage.setItem('mesaNumero', data.mesaNumero);
+          localStorage.setItem('ultimoMesaNumero', String(data.mesaNumero));
+          setSesionMesaId(String(data.sesionId));
 
           if (data.currentPedidoId) {
+            localStorage.setItem(`currentPedidoId_mesa_${data.mesaNumero}`, String(data.currentPedidoId));
             setCurrentPedidoId(data.currentPedidoId);
             setOrderPanelVisible(true);
+            setOrderPanelMinimized(false);
+          } else {
+            localStorage.removeItem(`currentPedidoId_mesa_${data.mesaNumero}`);
+            setCurrentPedidoId(null);
+            setOrderPanelVisible(false);
             setOrderPanelMinimized(false);
           }
           showNotification(`Acceso exitoso a Mesa ${data.mesaNumero}`, 'success');
@@ -106,21 +137,71 @@ const ClientHome = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Effect to load per-mesa data from localStorage when routing table number (numero) changes
   useEffect(() => {
+    const mesaNum = numero || localStorage.getItem('ultimoMesaNumero') || null;
+    if (mesaNum) {
+      const parsedNum = Number(mesaNum);
+      setMesaActual(parsedNum);
+      localStorage.setItem('ultimoMesaNumero', String(mesaNum));
+      localStorage.setItem('mesaNumero', String(mesaNum));
+
+      const savedPedidoId = localStorage.getItem(`currentPedidoId_mesa_${mesaNum}`);
+      setCurrentPedidoId(savedPedidoId ? Number(savedPedidoId) : null);
+
+      const savedPanelVisible = localStorage.getItem(`orderPanelVisible_mesa_${mesaNum}`);
+      setOrderPanelVisible(savedPanelVisible === 'true');
+
+      const savedPanelMinimized = localStorage.getItem(`orderPanelMinimized_mesa_${mesaNum}`);
+      setOrderPanelMinimized(savedPanelMinimized === 'true');
+
+      const mesaId = localStorage.getItem(`mesaId_mesa_${mesaNum}`);
+      const savedSesionMesaId = localStorage.getItem(`sesionMesaId_mesa_${mesaNum}`);
+      setSesionMesaId(savedSesionMesaId || null);
+
+      if (mesaId) {
+        localStorage.setItem('mesaId', mesaId);
+      } else {
+        localStorage.removeItem('mesaId');
+      }
+      if (savedSesionMesaId) {
+        localStorage.setItem('sesionMesaId', savedSesionMesaId);
+      } else {
+        localStorage.removeItem('sesionMesaId');
+      }
+    } else {
+      setMesaActual(null);
+      setCurrentPedidoId(null);
+      setSesionMesaId(null);
+      setOrderPanelVisible(false);
+      setOrderPanelMinimized(false);
+      localStorage.removeItem('mesaId');
+      localStorage.removeItem('sesionMesaId');
+    }
+  }, [numero]);
+
+  useEffect(() => {
+    if (!mesaActual) return;
     if (currentPedidoId !== null) {
+      localStorage.setItem(`currentPedidoId_mesa_${mesaActual}`, String(currentPedidoId));
       localStorage.setItem('currentPedidoId', String(currentPedidoId));
     } else {
+      localStorage.removeItem(`currentPedidoId_mesa_${mesaActual}`);
       localStorage.removeItem('currentPedidoId');
     }
-  }, [currentPedidoId]);
+  }, [currentPedidoId, mesaActual]);
 
   useEffect(() => {
+    if (!mesaActual) return;
+    localStorage.setItem(`orderPanelVisible_mesa_${mesaActual}`, String(orderPanelVisible));
     localStorage.setItem('orderPanelVisible', String(orderPanelVisible));
-  }, [orderPanelVisible]);
+  }, [orderPanelVisible, mesaActual]);
 
   useEffect(() => {
+    if (!mesaActual) return;
+    localStorage.setItem(`orderPanelMinimized_mesa_${mesaActual}`, String(orderPanelMinimized));
     localStorage.setItem('orderPanelMinimized', String(orderPanelMinimized));
-  }, [orderPanelMinimized]);
+  }, [orderPanelMinimized, mesaActual]);
 
   const handleButtonClick = (menu) => {
     setSelectedMenus((prevMenus) => [
@@ -140,40 +221,43 @@ const ClientHome = () => {
     setOrderPanelMinimized(true);
   };
 
+  // Refresh ALL orders for the current session
   useEffect(() => {
-    if (!currentPedidoId) {
+    if (!sesionMesaId) {
       return;
     }
 
-    const refreshPedido = async () => {
+    const refreshPedidos = async () => {
       try {
-        const pedido = await PedidoService.getPedidoById(currentPedidoId, usuario?.email);
-        if (!pedido) {
-          setCurrentPedidoId(null);
-          return;
-        }
-        const totalPedido = pedido.menus.reduce(
-          (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
-          0
-        );
-        setPedidoConfirmado((prev) => {
-          if (!prev || prev.id !== pedido.id) {
-            return { ...pedido, total: totalPedido };
-          }
-          return { ...prev, ...pedido, total: totalPedido };
+        const pedidos = await PedidoService.getPedidosBySession(sesionMesaId);
+        const pedidosConTotal = pedidos.map(pedido => {
+          const totalPedido = (pedido.menus || []).reduce(
+            (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
+            0
+          );
+          return { ...pedido, total: totalPedido };
         });
-      } catch (error) {
-        console.error('Error actualizando estado del pedido:', error);
-        if (error.message && (error.message.includes('no encontrado') || error.message.includes('404') || error.message.includes('Not Found'))) {
-          setCurrentPedidoId(null);
+        setPedidosConfirmados(pedidosConTotal);
+
+        // Actualizar currentPedidoId al último pedido que NO esté entregado o pagado
+        if (pedidosConTotal.length > 0) {
+          const ultimoPedidoActivo = pedidosConTotal.find(p => p.estado === 'confirmado' || p.estado === 'en_preparacion');
+          if (ultimoPedidoActivo) {
+            setCurrentPedidoId(ultimoPedidoActivo.id);
+          } else {
+            // Si todos están entregados, el próximo pedido será uno nuevo
+            setCurrentPedidoId(null);
+          }
         }
+      } catch (error) {
+        console.error('Error actualizando pedidos de la sesión:', error);
       }
     };
 
-    refreshPedido();
-    const intervalId = setInterval(refreshPedido, 5000);
+    refreshPedidos();
+    const intervalId = setInterval(refreshPedidos, 5000);
     return () => clearInterval(intervalId);
-  }, [currentPedidoId, usuario?.email]);
+  }, [sesionMesaId]);
 
   const getEstadoColor = (estado) => {
     switch (estado) {
@@ -183,6 +267,10 @@ const ClientHome = () => {
         return '#ffa502';
       case 'entregado':
         return '#2ed573';
+      case 'cuenta_pedida':
+        return '#1e90ff';
+      case 'pagado':
+        return '#a4b0be';
       default:
         return '#999';
     }
@@ -196,6 +284,10 @@ const ClientHome = () => {
         return 'En Preparación';
       case 'entregado':
         return 'Entregado';
+      case 'cuenta_pedida':
+        return 'Cuenta Pedida 💰';
+      case 'pagado':
+        return 'Pagado ✅';
       default:
         return estado;
     }
@@ -225,8 +317,11 @@ const ClientHome = () => {
 
   const handlePedirCuenta = async () => {
     try {
-
-      await PedidoService.updatePedidoEstado(pedidoConfirmado.id, 'forward');
+      // Pedir cuenta para todos los pedidos entregados
+      const pedidosEntregados = pedidosConfirmados.filter(p => p.estado === 'entregado');
+      for (const pedido of pedidosEntregados) {
+        await PedidoService.updatePedidoEstado(pedido.id, 'forward');
+      }
 
       navigate('/gracias', { replace: true });
     } catch (err) {
@@ -245,31 +340,31 @@ const ClientHome = () => {
       }));
 
       const userEmail = usuario?.email;
-      let response;
-      let successMessage = 'Pedido confirmado correctamente';
+      
+      // Intentamos crear un nuevo pedido siempre que se confirme, 
+      // vinculándolo a la sesión actual a través de los headers en PedidoService
+      const response = await PedidoService.createPedido(menusPayload, userEmail);
 
-      response = await PedidoService.createPedido(menusPayload, userEmail);
-      if (currentPedidoId) {
-        successMessage = 'Se creó un nuevo pedido; no se agregó al pedido en curso';
-      } else {
-        successMessage = 'Pedido confirmado correctamente';
-      }
-
-      const pedido = response?.pedido || response;
-      const totalPedido = pedido.menus.reduce(
+      const nuevoPedido = response?.pedido || response;
+      const totalNuevoPedido = (nuevoPedido.menus || []).reduce(
         (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
         0
       );
 
-      setCurrentPedidoId(pedido.id);
-      setPedidoConfirmado({
-        ...pedido,
-        total: totalPedido,
+      // Actualizar la lista de pedidos confirmados agregando el nuevo
+      // Usamos una función de actualización para asegurarnos de tener el estado más reciente
+      setPedidosConfirmados(prev => {
+        // Evitar duplicados por ID si el refresh ya lo trajo
+        const existe = prev.some(p => p.id === nuevoPedido.id);
+        if (existe) return prev;
+        return [{ ...nuevoPedido, total: totalNuevoPedido }, ...prev];
       });
+
+      setCurrentPedidoId(nuevoPedido.id);
       setOrderPanelVisible(true);
       setOrderPanelMinimized(false);
 
-      showNotification(successMessage);
+      showNotification('Pedido confirmado correctamente');
       setSelectedMenus([]);
       setSidebarVisible(false);
     } catch (e) {
@@ -303,73 +398,101 @@ const ClientHome = () => {
         </div>
       )}
 
-      {pedidoConfirmado && orderPanelVisible && (
-        <div style={styles.orderPanel}>
-          <div style={styles.orderPanelHeader}>
-            <div>
-              <h2 style={styles.modalTitle}>Detalle de pedido</h2>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {pedidoConfirmado.id && <p style={styles.modalSubtitle}>Pedido #{pedidoConfirmado.id}</p>}
-                {mesaActual && <span style={styles.mesaBadge}>Mesa {mesaActual}</span>}
-              </div>
-            </div>
-            <button onClick={handleCerrarDetallePedido} style={styles.modalCloseButton} aria-label="Minimizar detalle de pedido">
-              —
-            </button>
-          </div>
-          <div style={styles.modalStatusRow}>
-            <span style={{ ...styles.modalStatus, backgroundColor: getEstadoColor(pedidoConfirmado.estado) }}>
-              {getEstadoLabel(pedidoConfirmado.estado)}
-            </span>
-            <span style={styles.modalTotalLabel}>Total:</span>
-            <strong style={styles.modalTotalValue}>${pedidoConfirmado.total.toFixed(2)}</strong>
-          </div>
-          <div style={styles.modalList}>
-            {pedidoConfirmado.menus.map((menu, index) => (
-              <div key={index} style={styles.modalItem}>
-                <div style={styles.modalItemHeader}>
-                  <h3 style={styles.modalItemTitle}>{menu.nombre}</h3>
-                  <span style={styles.modalItemCantidad}>x{menu.cantidad}</span>
+      {pedidosConfirmados.length > 0 && orderPanelVisible && (() => {
+        const totalGeneral = pedidosConfirmados.reduce((sum, p) => sum + (p.total || 0), 0);
+        const todosPedidosEntregados = pedidosConfirmados.length > 0 && pedidosConfirmados.every(p => p.estado === 'entregado' || p.estado === 'cuenta_pedida' || p.estado === 'pagado');
+        const algunoEntregado = pedidosConfirmados.some(p => p.estado === 'entregado');
+        const todosConCuenta = pedidosConfirmados.every(p => p.estado === 'cuenta_pedida' || p.estado === 'pagado');
+        return (
+          <div style={styles.orderPanel}>
+            <div style={styles.orderPanelHeader}>
+              <div>
+                <h2 style={styles.modalTitle}>Detalle de pedidos</h2>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <p style={styles.modalSubtitle}>{pedidosConfirmados.length} pedido{pedidosConfirmados.length > 1 ? 's' : ''}</p>
+                  {mesaActual && <span style={styles.mesaBadge}>Mesa {mesaActual}</span>}
                 </div>
-                <p style={styles.modalItemDescription}>{menu.descripcion}</p>
-                <p style={styles.modalItemPrice}>Precio unitario: ${Number(menu.precio_unitario).toFixed(2)}</p>
               </div>
-            ))}
+              <button onClick={handleCerrarDetallePedido} style={styles.modalCloseButton} aria-label="Minimizar detalle de pedido">
+                —
+              </button>
+            </div>
+            <div style={styles.modalStatusRow}>
+              <span style={styles.modalTotalLabel}>Total mesa:</span>
+              <strong style={styles.modalTotalValue}>${totalGeneral.toFixed(2)}</strong>
+            </div>
+            <div style={{ ...styles.modalList, maxHeight: '60vh', overflowY: 'auto' }}>
+              {pedidosConfirmados.map((pedido) => (
+                <div key={pedido.id} style={{ marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <strong style={{ fontSize: '14px' }}>Pedido #{pedido.id}</strong>
+                    <span style={{ ...styles.modalStatus, backgroundColor: getEstadoColor(pedido.estado), padding: '4px 8px', fontSize: '11px' }}>
+                      {getEstadoLabel(pedido.estado)}
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 8px 0', fontSize: '13px', color: '#666' }}>Subtotal: ${pedido.total.toFixed(2)}</p>
+                  {pedido.menus.map((menu, index) => (
+                    <div key={index} style={styles.modalItem}>
+                      <div style={styles.modalItemHeader}>
+                        <h3 style={styles.modalItemTitle}>{menu.nombre}</h3>
+                        <span style={styles.modalItemCantidad}>x{menu.cantidad}</span>
+                      </div>
+                      <p style={styles.modalItemDescription}>{menu.descripcion}</p>
+                      <p style={styles.modalItemPrice}>Precio unitario: ${Number(menu.precio_unitario).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={styles.modalActionsRow}>
+              <button onClick={handleCerrarDetallePedido} style={styles.modalActionButton}>
+                Minimizar
+              </button>
+            </div>
+            <div style={{ marginTop: '16px', width: '100%' }}>
+              <button
+                onClick={handlePedirCuenta}
+                disabled={!algunoEntregado || todosConCuenta}
+                style={{
+                  ...styles.cuentaBtn,
+                  ...(!algunoEntregado || todosConCuenta ? styles.cuentaBtnDisabled : {})
+                }}
+              >
+                Pedir cuenta
+              </button>
+            </div>
           </div>
-          <div style={styles.modalActionsRow}>
-            <button onClick={handleCerrarDetallePedido} style={styles.modalActionButton}>
-              Minimizar
-            </button>
-          </div>
-          <div style={{ marginTop: '16px', width: '100%' }}>
-            <button
-              onClick={handlePedirCuenta}
-              disabled={
-                pedidoConfirmado.estado === 'confirmado' ||
-                pedidoConfirmado.estado === 'en_preparacion'
-              }
-              style={{
-                ...styles.cuentaBtn,
-                ...((pedidoConfirmado.estado === 'confirmado' || pedidoConfirmado.estado === 'en_preparacion')
-                  ? styles.cuentaBtnDisabled
-                  : {})
-              }}
-            >
-              Pedir cuenta
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
       <nav style={{ ...styles.navbar, padding: isMobile ? '0 15px' : isTablet ? '0 25px' : '0 40px', height: isMobile ? '50px' : '60px' }}>
-        <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate('/')}>
-          <span style={{ color: '#2d3436' }}>
-            P{!isMobile && 'edidos'}
-          </span>
-          <span style={{ color: '#ff4757' }}>
-            A{!isMobile && 'hora'}!
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '15px' }}>
+          <div style={{ ...styles.brand, fontSize: isMobile ? '18px' : '24px' }} onClick={() => navigate('/')}>
+            <span style={{ color: '#2d3436' }}>
+              P{!isMobile && 'edidos'}
+            </span>
+            <span style={{ color: '#ff4757' }}>
+              A{!isMobile && 'hora'}!
+            </span>
+          </div>
+          {mesaActual && (
+            <div style={{
+              backgroundColor: '#ff4757',
+              color: '#fff',
+              padding: isMobile ? '4px 10px' : '6px 14px',
+              borderRadius: '50px',
+              fontSize: isMobile ? '12px' : '15px',
+              fontWeight: '800',
+              boxShadow: '0 4px 10px rgba(255, 71, 87, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid #fff'
+            }}>
+              MESA {mesaActual}
+            </div>
+          )}
         </div>
-        {currentPedidoId && !orderPanelVisible && (
+        {pedidosConfirmados.length > 0 && !orderPanelVisible && (
           <button
             onClick={() => {
               setOrderPanelVisible(true);
@@ -378,35 +501,35 @@ const ClientHome = () => {
             style={styles.openOrderPanelButton}
             aria-label="Mostrar estado del pedido"
           >
-            Ver estado del pedido
+            Ver estado del pedido ({pedidosConfirmados.length})
           </button>
         )}
       </nav>
-      {pedidoConfirmado && orderPanelMinimized && (
-        <div style={styles.minimizedOrderPanel}>
-          <div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-              <strong style={{ display: 'block' }}>Pedido #{pedidoConfirmado.id}</strong>
-              {mesaActual && <span style={styles.mesaBadgeSmall}>Mesa {mesaActual}</span>}
+      {pedidosConfirmados.length > 0 && orderPanelMinimized && (() => {
+        const totalGeneral = pedidosConfirmados.reduce((sum, p) => sum + (p.total || 0), 0);
+        return (
+          <div style={styles.minimizedOrderPanel}>
+            <div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                <strong style={{ display: 'block' }}>{pedidosConfirmados.length} pedido{pedidosConfirmados.length > 1 ? 's' : ''}</strong>
+                {mesaActual && <span style={styles.mesaBadgeSmall}>Mesa {mesaActual}</span>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ color: '#333', fontWeight: '700' }}>Total: ${totalGeneral.toFixed(2)}</span>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ ...styles.modalStatus, backgroundColor: getEstadoColor(pedidoConfirmado.estado), padding: '6px 10px', fontSize: '12px' }}>
-                {getEstadoLabel(pedidoConfirmado.estado)}
-              </span>
-              <span style={{ color: '#333', fontWeight: '700' }}>Total: ${pedidoConfirmado.total.toFixed(2)}</span>
-            </div>
+            <button
+              onClick={() => {
+                setOrderPanelVisible(true);
+                setOrderPanelMinimized(false);
+              }}
+              style={styles.openOrderPanelButton}
+            >
+              Abrir
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setOrderPanelVisible(true);
-              setOrderPanelMinimized(false);
-            }}
-            style={styles.openOrderPanelButton}
-          >
-            Abrir
-          </button>
-        </div>
-      )}
+        );
+      })()}
       <main style={styles.mainContent}>
         <h1 style={styles.title}>
           Bienvenido{usuario?.name ? `, ${usuario.name}` : ''}

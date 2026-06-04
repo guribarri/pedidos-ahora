@@ -19,6 +19,7 @@ const PedidosConfirmados = ({ onLogout }) => {
       case 'en_preparacion': return '#ffa502';
       case 'entregado': return '#2ed573';
       case 'cuenta_pedida': return '#1e90ff';
+      case 'pagado': return '#a4b0be';
       default: return '#999';
     }
   };
@@ -29,6 +30,7 @@ const PedidosConfirmados = ({ onLogout }) => {
       case 'en_preparacion': return 'En Preparación';
       case 'entregado': return 'Entregado';
       case 'cuenta_pedida': return 'Cuenta Pedida 💰';
+      case 'pagado': return 'Pagado ✅';
       default: return estado;
     }
   };
@@ -193,25 +195,44 @@ const PedidosConfirmados = ({ onLogout }) => {
 
               {/* HEADER DE GRUPO CON BOTÓN CONDICIONAL */}
               <div style={styles.mesaHeaderContainer}>
-                <h3 style={styles.mesaGroupHeader}>{mesaLabel}</h3>
-                {mesaLabel !== 'Sin Mesa' && (
-                  <button
-                    onClick={() => handleCerrarMesa(mesaLabel, pedidosDeMesa)}
-                    disabled={!pedidosDeMesa.some(p => p.estado === 'cuenta_pedida')}
-                    style={{
-                      ...styles.cerrarMesaBtn,
-                      ...(!pedidosDeMesa.some(p => p.estado === 'cuenta_pedida') ? styles.cerrarMesaBtnDisabled : {})
-                    }}
-                    title={!pedidosDeMesa.some(p => p.estado === 'cuenta_pedida') ? "No se puede cerrar la mesa porque el cliente no pidió la cuenta" : "Cerrar mesa y liberar"}
-                  >
-                    Cerrar Mesa
-                  </button>
-                )}
+                <div>
+                  <h3 style={styles.mesaGroupHeader}>{mesaLabel}</h3>
+                  {mesaLabel !== 'Sin Mesa' && (
+                    <div style={{ fontSize: '14px', color: '#2d3436', fontWeight: '600', marginTop: '-10px', marginBottom: '10px' }}>
+                      Total mesa: ${pedidosDeMesa.reduce((sum, p) => {
+                        const subtotal = (p.menus || []).reduce((s, m) => s + Number(m.precio_unitario) * m.cantidad, 0);
+                        return sum + subtotal;
+                      }, 0).toFixed(2)}
+                    </div>
+                  )}
+                </div>
+                {(() => {
+                  const tieneCuentaPedida = pedidosDeMesa.some(p => p.estado === 'cuenta_pedida');
+                  const todosPagados = pedidosDeMesa.every(p => p.estado === 'pagado');
+                  const sePuedeCerrar = tieneCuentaPedida || todosPagados;
+                  return mesaLabel !== 'Sin Mesa' && (
+                    <button
+                      onClick={() => handleCerrarMesa(mesaLabel, pedidosDeMesa)}
+                      disabled={!sePuedeCerrar}
+                      style={{
+                        ...styles.cerrarMesaBtn,
+                        ...(!sePuedeCerrar ? styles.cerrarMesaBtnDisabled : {})
+                      }}
+                      title={!sePuedeCerrar ? "No se puede cerrar la mesa porque aún hay pedidos en curso" : "Cerrar mesa y liberar"}
+                    >
+                      Cerrar Mesa
+                    </button>
+                  );
+                })()}
               </div>
 
               <div style={styles.groupContent}>
                 {pedidosDeMesa.map((pedido) => (
-                  <div key={pedido.id} style={{ ...styles.card, borderLeftColor: getEstadoColor(pedido.estado) }}>
+                  <div key={pedido.id} style={{
+                    ...styles.card,
+                    borderLeftColor: getEstadoColor(pedido.estado),
+                    ...(pedido.estado === 'pagado' ? styles.cardPagado : {})
+                  }}>
                     <div style={{ ...styles.cardHeader, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
                       <div style={styles.headerLeft}>
                         <strong>ID Pedido: {pedido.id}</strong>
@@ -221,35 +242,51 @@ const PedidosConfirmados = ({ onLogout }) => {
                       </div>
 
                       {/* CONTENEDOR DE BOTONES DE TRANSICIÓN DE ESTADO */}
-                      <div style={styles.buttonsContainer}>
-                        {/* BOTÓN RETROCEDER (←) */}
-                        <button
-                          onClick={() => handleEstadoChange(pedido.id, 'backward')}
-                          disabled={pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id}
-                          style={{
-                            ...styles.navButton,
-                            opacity: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 0.5 : 1,
-                            cursor: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                          }}
-                          title={pedido.estado === 'cuenta_pedida' ? "No se puede retroceder un pedido con cuenta pedida" : "Retroceder estado"}
-                        >
-                          ←
-                        </button>
+                      {pedido.estado !== 'pagado' && (
+                        <div style={styles.buttonsContainer}>
+                          {/* BOTÓN RETROCEDER (←) */}
+                          <button
+                            onClick={() => handleEstadoChange(pedido.id, 'backward')}
+                            disabled={pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id}
+                            style={{
+                              ...styles.navButton,
+                              opacity: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 0.5 : 1,
+                              cursor: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                            }}
+                            title={pedido.estado === 'cuenta_pedida' ? "No se puede retroceder un pedido con cuenta pedida" : "Retroceder estado"}
+                          >
+                            ←
+                          </button>
 
-                        {/* BOTÓN AVANZAR (→) */}
-                        <button
-                          onClick={() => handleEstadoChange(pedido.id, 'forward')}
-                          disabled={pedido.estado === 'entregado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id}
-                          style={{
-                            ...styles.navButton,
-                            opacity: (pedido.estado === 'entregado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 0.5 : 1,
-                            cursor: (pedido.estado === 'entregado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                          }}
-                          title={pedido.estado === 'cuenta_pedida' ? "La cuenta ya fue solicitada" : "Avanzar estado"}
-                        >
-                          →
-                        </button>
-                      </div>
+                          {/* BOTÓN CERRAR PEDIDO (SI ES CUENTA PEDIDA) */}
+                          {pedido.estado === 'cuenta_pedida' && (
+                            <button
+                              onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                              disabled={updatingId === pedido.id}
+                              style={styles.cerrarPedidoBtn}
+                              title="Cobrar y cerrar este pedido"
+                            >
+                              Cerrar Pedido 💵
+                            </button>
+                          )}
+
+                          {/* BOTÓN AVANZAR (→) */}
+                          {pedido.estado !== 'cuenta_pedida' && (
+                            <button
+                              onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                              disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
+                              style={{
+                                ...styles.navButton,
+                                opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
+                                cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                              }}
+                              title="Avanzar estado"
+                            >
+                              →
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {pedido.fecha && <span style={{ ...styles.date, fontSize: isMobile ? '12px' : '12px' }}>{new Date(pedido.fecha).toLocaleString()}</span>}
                     </div>
@@ -464,6 +501,22 @@ const styles = {
     color: '#b2bec3',
     cursor: 'not-allowed',
     boxShadow: 'none',
+  },
+  cerrarPedidoBtn: {
+    backgroundColor: '#2ed573',
+    color: '#ffffff',
+    border: 'none',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+    boxShadow: '0 2px 5px rgba(46, 213, 115, 0.2)',
+  },
+  cardPagado: {
+    backgroundColor: '#f5f6fa',
+    opacity: 0.75,
   }
 };
 

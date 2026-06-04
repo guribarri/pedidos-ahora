@@ -58,6 +58,8 @@ app.get("/mesas", isAdmin, mesasController.getAllMesas.bind(mesasController));
 app.post("/pedidos", pedidosController.create.bind(pedidosController));
 // GET pedidos del usuario actual
 app.get("/pedidos/usuario", pedidosController.getByUser.bind(pedidosController));
+// GET todos los pedidos de la sesión de mesa activa
+app.get("/pedidos/sesion", pedidosController.getBySession.bind(pedidosController));
 // GET pedido por ID para el usuario actual
 app.get("/pedidos/:id", pedidosController.getById.bind(pedidosController));
 // PATCH agregar menús a un pedido existente para el usuario actual

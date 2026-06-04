@@ -48,11 +48,22 @@ class PedidosController {
             const { menus } = req.body;
             const userEmail = req.headers['x-user-email'] || req.body.userEmail || null;
             const mesaId = req.headers['x-mesa-id'] ? parseInt(req.headers['x-mesa-id']) : null;
-            const sesionMesaId = req.headers['x-sesion-mesa-id'] ? parseInt(req.headers['x-sesion-mesa-id']) : null;
+            let sesionMesaId = req.headers['x-sesion-mesa-id'] ? parseInt(req.headers['x-sesion-mesa-id']) : null;
+
+            // Si no viene sesionMesaId pero sí mesaId, intentamos buscar una sesión activa para esa mesa
+            if (!sesionMesaId && mesaId) {
+                const sesionResult = await pool.query(
+                    "SELECT id FROM sesiones_mesas WHERE mesa_id = $1 AND estado = 'activa' ORDER BY fecha_inicio DESC LIMIT 1",
+                    [mesaId]
+                );
+                if (sesionResult.rows.length > 0) {
+                    sesionMesaId = sesionResult.rows[0].id;
+                }
+            }
 
             // Requiere email O que sea un pedido de mesa
-            if (!userEmail && !mesaId) {
-                return res.status(400).json({ message: "El email del usuario es requerido en el header x-user-email" });
+            if (!userEmail && !mesaId && !sesionMesaId) {
+                return res.status(400).json({ message: "El email del usuario o una sesión de mesa es requerida" });
             }
 
             // Validar que haya al menos un menú
@@ -264,7 +275,13 @@ class PedidosController {
                         nuevoEstado = 'cuenta_pedida'; // <-- ¡AHORA SÍ PERMITIMOS AVANZAR A LA CUENTA!
                         break;
                     case 'cuenta_pedida':
+                        if (isAdminUser) {
+                            nuevoEstado = 'pagado';
+                            break;
+                        }
                         return res.status(400).json({ message: "La cuenta ya fue solicitada para este pedido" });
+                    case 'pagado':
+                        return res.status(400).json({ message: "El pedido ya está pagado" });
                     default:
                         return res.status(400).json({ message: "Estado inválido" });
                 }
@@ -281,6 +298,12 @@ class PedidosController {
                     case 'cuenta_pedida':
                         nuevoEstado = 'entregado'; // <-- POR SI EL MOZO COLO REBOTA LA CUENTA POR ERROR
                         break;
+                    case 'pagado':
+                        if (isAdminUser) {
+                            nuevoEstado = 'cuenta_pedida';
+                            break;
+                        }
+                        return res.status(400).json({ message: "No tienes permiso para modificar este pedido" });
                     default:
                         return res.status(400).json({ message: "Estado inválido" });
                 }
@@ -292,6 +315,49 @@ class PedidosController {
             res.json({ message: "Estado actualizado exitosamente", pedido: result.rows[0] });
         } catch (error) {
             res.status(500).json({ message: "Error al actualizar el estado del pedido", error: error.message });
+        }
+    }
+
+    async getBySession(req, res) {
+        try {
+            const sesionMesaId = req.headers['x-sesion-mesa-id'] ? parseInt(req.headers['x-sesion-mesa-id']) : null;
+            if (!sesionMesaId) {
+                return res.status(400).json({ message: "El ID de sesión de mesa es requerido en el header x-sesion-mesa-id" });
+            }
+
+            // Verificar si la sesión está activa
+            const sesionResult = await pool.query(
+                `SELECT estado FROM sesiones_mesas WHERE id = $1`,
+                [sesionMesaId]
+            );
+
+            if (sesionResult.rows.length === 0 || sesionResult.rows[0].estado !== 'activa') {
+                return res.status(404).json({ message: "Sesión finalizada o no encontrada" });
+            }
+
+            const result = await pool.query(`
+                SELECT p.id, p.fecha, p.estado, p.user_email, p.mesa_id, p.sesion_mesa_id
+                FROM pedidos p
+                WHERE p.sesion_mesa_id = $1
+                ORDER BY p.fecha DESC
+            `, [sesionMesaId]);
+
+            const pedidos = await Promise.all(result.rows.map(async (pedido) => {
+                const menusResult = await pool.query(`
+                    SELECT pm.id_menu, pm.cantidad, pm.precio_unitario, m.nombre, m.descripcion
+                    FROM pedidos_menus pm
+                    JOIN menus m ON pm.id_menu = m.id
+                    WHERE pm.id_pedido = $1
+                `, [pedido.id]);
+
+                pedido.menus = menusResult.rows;
+                return pedido;
+            }));
+
+            res.json(pedidos);
+        } catch (error) {
+            console.error('Error al obtener pedidos de la sesión:', error);
+            res.status(500).json({ message: "Error al obtener los pedidos de la sesión", error: error.message });
         }
     }
 }
