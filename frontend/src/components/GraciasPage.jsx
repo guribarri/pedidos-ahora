@@ -71,22 +71,13 @@ const GraciasPage = () => {
                 <span style={styles.icon}>👋</span>
                 <h1 style={styles.title}>¡Gracias por su visita!</h1>
                 <p style={styles.subtitle}>
-                    {tienePedidosPendientes 
-                        ? "Has solicitado la cuenta para tus pedidos entregados. El resto de tus pedidos siguen en curso."
-                        : "Un mozo se acercará a la mesa para traerte la cuenta y procesar el pago."}
+                    "Un mozo se acercará a la mesa para traerte la cuenta y procesar el pago."
                 </p>
                 
                 {loading ? (
                     <p style={{ marginTop: '20px', color: '#999' }}>Cargando...</p>
                 ) : (
-                    tienePedidosPendientes && (
-                        <button 
-                            onClick={handleBackToHome}
-                            style={styles.backButton}
-                        >
-                            Regresar al Home
-                        </button>
-                    )
+                    tienePedidosPendientes
                 )}
             </div>
         </div>
