@@ -79,6 +79,13 @@ const ClientHome = () => {
   useEffect(() => {
     const initMesa = async () => {
       const token = searchParams.get('token');
+      // Regla estricta: si se accede por /mesa/:numero SIN token, negar acceso y redirigir
+      if (numero && !token) {
+        showNotification('Acceso inválido a la mesa. Escaneá el QR para entrar.', 'error');
+        navigate('/', { replace: true });
+        return;
+      }
+
       if (numero && token) {
         try {
           const data = await PedidoService.accederMesa(numero, token);

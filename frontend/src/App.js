@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { UserProvider, useUserContext } from './hooks/useUserContext';
 import ClientHome from './components/ClientHome';
+import NotFound from './components/NotFound';
 import Home from './components/Home';
 import MenuForm from './components/MenuForm';
 import PedidosConfirmados from './components/PedidosConfirmados';
@@ -27,11 +28,11 @@ function AppRoutes() {
         <Routes>
             <Route
                 path="/"
-                element={<ClientHome />}
+                element={<NotFound message={'Acceso inválido: use el QR para entrar a una mesa.'} />}
             />
             <Route
                 path="/mesa/:numero"
-                element={<ClientHome />}
+                element={<MesaRouteWrapper />}
             />
             <Route path="/gracias" element={<GraciasPage />} />
             <Route
@@ -54,6 +55,26 @@ function AppRoutes() {
             />
         </Routes>
     );
+}
+
+function MesaRouteWrapper() {
+    // Wrapper to enforce token presence in query for /mesa/:numero
+    const [searchParams] = (() => {
+        try {
+            const { useSearchParams } = require('react-router-dom');
+            return useSearchParams();
+        } catch (e) {
+            return [new URLSearchParams(window.location.search)];
+        }
+    })();
+
+    const token = searchParams.get ? searchParams.get('token') : new URLSearchParams(window.location.search).get('token');
+
+    if (!token) {
+        return <NotFound message="Acceso inválido: token de mesa requerido" />;
+    }
+
+    return <ClientHome />;
 }
 
 function App() {
