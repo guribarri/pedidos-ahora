@@ -114,7 +114,9 @@ const ClientHome = () => {
           showNotification(`Acceso exitoso a Mesa ${data.mesaNumero}`, 'success');
         } catch (error) {
           console.error('Error al acceder a la mesa:', error);
+          // Si el token es inválido o falla la validación, no permitir permanecer en la página
           showNotification('Error al acceder a la mesa. Verificá el código QR.', 'error');
+          navigate('/', { replace: true });
         }
       }
     };
