@@ -44,6 +44,7 @@ const ClientHome = () => {
     const mesaNum = getInitialMesaNumero();
     return mesaNum ? localStorage.getItem(`sesionMesaId_mesa_${mesaNum}`) : null;
   });
+  const [sesionCuentaSolicitada, setSesionCuentaSolicitada] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [notification, setNotification] = useState(null);
@@ -230,6 +231,13 @@ const ClientHome = () => {
     const refreshPedidos = async () => {
       try {
         const pedidos = await PedidoService.getPedidosBySession(sesionMesaId);
+        // Obtener estado de sesión (cuenta_solicitada)
+        try {
+          const ses = await PedidoService.getSession(sesionMesaId);
+          setSesionCuentaSolicitada(!!ses?.cuenta_solicitada);
+        } catch (e) {
+          // ignore
+        }
         const pedidosConTotal = pedidos.map(pedido => {
           const totalPedido = (pedido.menus || []).reduce(
             (sum, menu) => sum + Number(menu.precio_unitario) * (menu.cantidad ?? 1),
@@ -317,12 +325,21 @@ const ClientHome = () => {
 
   const handlePedirCuenta = async () => {
     try {
-      // Pedir cuenta para todos los pedidos entregados
-      const pedidosEntregados = pedidosConfirmados.filter(p => p.estado === 'entregado');
-      for (const pedido of pedidosEntregados) {
-        await PedidoService.updatePedidoEstado(pedido.id, 'forward');
+      // Validar que TODOS los pedidos estén entregados
+      const todosEntregados = pedidosConfirmados.length > 0 && pedidosConfirmados.every(p => p.estado === 'entregado');
+      if (!todosEntregados) {
+        showNotification('Para pedir la cuenta, todos los pedidos deben estar entregados.', 'info');
+        return;
       }
 
+      // Solicitar la cuenta a nivel de sesión/mesa
+      if (!sesionMesaId) {
+        showNotification('No se encontró la sesión de mesa activa.', 'error');
+        return;
+      }
+
+      await PedidoService.solicitarCuenta(sesionMesaId);
+      showNotification('Cuenta solicitada. Gracias.', 'success');
       navigate('/gracias', { replace: true });
     } catch (err) {
       alert("Hubo un error al solicitar la cuenta. Por favor, avise al mozo.");
@@ -400,9 +417,9 @@ const ClientHome = () => {
 
       {pedidosConfirmados.length > 0 && orderPanelVisible && (() => {
         const totalGeneral = pedidosConfirmados.reduce((sum, p) => sum + (p.total || 0), 0);
-        const todosPedidosEntregados = pedidosConfirmados.length > 0 && pedidosConfirmados.every(p => p.estado === 'entregado' || p.estado === 'cuenta_pedida' || p.estado === 'pagado');
-        const algunoEntregado = pedidosConfirmados.some(p => p.estado === 'entregado');
-        const todosConCuenta = pedidosConfirmados.every(p => p.estado === 'cuenta_pedida' || p.estado === 'pagado');
+        // Nuevo: habilitar "Pedir cuenta" sólo si TODOS los pedidos están en 'entregado'
+        const todosEntregados = pedidosConfirmados.length > 0 && pedidosConfirmados.every(p => p.estado === 'entregado');
+        const todosPagados = pedidosConfirmados.every(p => p.estado === 'pagado');
         return (
           <div style={styles.orderPanel}>
             <div style={styles.orderPanelHeader}>
@@ -449,18 +466,18 @@ const ClientHome = () => {
                 Minimizar
               </button>
             </div>
-            <div style={{ marginTop: '16px', width: '100%' }}>
-              <button
-                onClick={handlePedirCuenta}
-                disabled={!algunoEntregado || todosConCuenta}
-                style={{
-                  ...styles.cuentaBtn,
-                  ...(!algunoEntregado || todosConCuenta ? styles.cuentaBtnDisabled : {})
-                }}
-              >
-                Pedir cuenta
-              </button>
-            </div>
+                  <div style={{ marginTop: '16px', width: '100%' }}>
+                    <button
+                      onClick={handlePedirCuenta}
+                      disabled={!todosEntregados || sesionCuentaSolicitada}
+                      style={{
+                        ...styles.cuentaBtn,
+                        ...(!todosEntregados || sesionCuentaSolicitada ? styles.cuentaBtnDisabled : {})
+                      }}
+                    >
+                      {sesionCuentaSolicitada ? 'Cuenta solicitada' : 'Pedir cuenta'}
+                    </button>
+                  </div>
           </div>
         );
       })()}

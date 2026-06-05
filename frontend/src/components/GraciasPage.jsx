@@ -20,17 +20,17 @@ const GraciasPage = () => {
             }
 
             try {
-                const pedidos = await PedidoService.getPedidosBySession(sesionId);
-                // Si hay algún pedido que NO sea 'cuenta_pedida' o 'pagado', 
-                // significa que aún hay actividad pendiente en la mesa.
-                const pendientes = pedidos.some(p => p.estado !== 'cuenta_pedida' && p.estado !== 'pagado');
-                
-                setTienePedidosPendientes(pendientes);
+                    const pedidos = await PedidoService.getPedidosBySession(sesionId);
+                    const ses = await PedidoService.getSession(sesionId);
+                    // Si la sesión solicitó la cuenta, pendientes = hay pedidos que NO estén pagados
+                    const pendientes = ses?.cuenta_solicitada ? pedidos.some(p => p.estado !== 'pagado') : true;
 
-                if (!pendientes) {
-                    // Si NO hay pendientes, limpiamos la sesión local
-                    limpiarSesionLocal(mesaNum);
-                }
+                    setTienePedidosPendientes(pendientes);
+
+                    if (!pendientes) {
+                        // Si NO hay pendientes, limpiamos la sesión local
+                        limpiarSesionLocal(mesaNum);
+                    }
             } catch (error) {
                 console.error('Error al verificar pedidos en GraciasPage:', error);
             } finally {

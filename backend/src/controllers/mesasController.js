@@ -90,21 +90,54 @@ class MesasController {
             }
             const mesaId = mesaResult.rows[0].id;
 
-            // 2. Finalizar la sesión activa de esa mesa
-            await pool.query(
-                `UPDATE sesiones_mesas 
-                 SET estado = 'finalizada', fecha_fin = NOW() 
-                 WHERE mesa_id = $1 AND estado = 'activa'`,
+            // 2. Obtener la sesión activa para esta mesa
+            const sesionResult = await pool.query(
+                `SELECT id FROM sesiones_mesas WHERE mesa_id = $1 AND estado = 'activa' ORDER BY fecha_inicio DESC LIMIT 1`,
                 [mesaId]
             );
 
-            // 3. Volver a poner la mesa como 'libre' para el próximo comensal
+            if (sesionResult.rows.length === 0) {
+                return res.status(400).json({ message: 'No hay sesión activa para esta mesa' });
+            }
+
+            const sesionId = sesionResult.rows[0].id;
+
+            // 3. Verificar que al menos un pedido haya solicitado la cuenta (estado 'cuenta_pedida')
+            // 3. Verificar que la sesión tenga la bandera 'cuenta_solicitada'
+            // Asegurarnos que la columna exista (para despliegues que no recrearon la DB)
+            await pool.query("ALTER TABLE sesiones_mesas ADD COLUMN IF NOT EXISTS cuenta_solicitada BOOLEAN DEFAULT false");
+
+            const cuentaReqResult = await pool.query(
+                `SELECT cuenta_solicitada FROM sesiones_mesas WHERE id = $1`,
+                [sesionId]
+            );
+
+            const cuentaSolicitada = cuentaReqResult.rows.length > 0 && cuentaReqResult.rows[0].cuenta_solicitada;
+            if (!cuentaSolicitada) {
+                return res.status(400).json({ message: 'No se puede cerrar la mesa: no se solicitó la cuenta para esta sesión.' });
+            }
+
+            // 4. Marcar como 'pagado' aquellos pedidos que estén en 'entregado' o en cualquier estado pendiente
+            const updateResult = await pool.query(
+                `UPDATE pedidos SET estado = 'pagado' WHERE sesion_mesa_id = $1 AND estado != 'pagado' RETURNING id`,
+                [sesionId]
+            );
+
+            // 5. Finalizar la sesión activa de esa mesa
+            await pool.query(
+                `UPDATE sesiones_mesas 
+                 SET estado = 'finalizada', fecha_fin = NOW() 
+                 WHERE id = $1`,
+                [sesionId]
+            );
+
+            // 6. Volver a poner la mesa como 'libre' para el próximo comensal
             await pool.query(
                 `UPDATE mesas SET estado = 'libre' WHERE id = $1`,
                 [mesaId]
             );
 
-            res.json({ message: `Mesa ${numero} cerrada con éxito y sesión finalizada.` });
+            res.json({ message: `Mesa ${numero} cerrada con éxito y ${updateResult.rowCount} pedido(s) marcado(s) como pagado.` });
         } catch (error) {
             console.error('Error al cerrar la mesa:', error);
             res.status(500).json({ message: 'Error al cerrar la mesa', error: error.message });
@@ -118,6 +151,47 @@ class MesasController {
         } catch (error) {
             console.error('Error al obtener mesas:', error);
             res.status(500).json({ message: 'Error al obtener mesas', error: error.message });
+        }
+    }
+
+    async getSession(req, res) {
+        try {
+            const { id } = req.params;
+            // Asegurarnos que la columna exista
+            await pool.query("ALTER TABLE sesiones_mesas ADD COLUMN IF NOT EXISTS cuenta_solicitada BOOLEAN DEFAULT false");
+
+            const result = await pool.query('SELECT id, mesa_id, fecha_inicio, fecha_fin, estado, cuenta_solicitada FROM sesiones_mesas WHERE id = $1', [id]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ message: 'Sesión no encontrada' });
+            }
+            res.json(result.rows[0]);
+        } catch (error) {
+            console.error('Error al obtener sesión:', error);
+            res.status(500).json({ message: 'Error al obtener sesión', error: error.message });
+        }
+    }
+
+    async solicitarCuenta(req, res) {
+        try {
+            const { id } = req.params;
+            // Asegurarnos que la columna exista
+            await pool.query("ALTER TABLE sesiones_mesas ADD COLUMN IF NOT EXISTS cuenta_solicitada BOOLEAN DEFAULT false");
+
+            const sesionResult = await pool.query('SELECT id, estado FROM sesiones_mesas WHERE id = $1', [id]);
+            if (sesionResult.rows.length === 0) {
+                return res.status(404).json({ message: 'Sesión no encontrada' });
+            }
+
+            if (sesionResult.rows[0].estado !== 'activa') {
+                return res.status(400).json({ message: 'La sesión no está activa' });
+            }
+
+            await pool.query('UPDATE sesiones_mesas SET cuenta_solicitada = true WHERE id = $1', [id]);
+
+            res.json({ message: 'Cuenta solicitada para la sesión' });
+        } catch (error) {
+            console.error('Error al solicitar cuenta:', error);
+            res.status(500).json({ message: 'Error al solicitar la cuenta', error: error.message });
         }
     }
 }

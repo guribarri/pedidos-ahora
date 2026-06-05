@@ -272,14 +272,7 @@ class PedidosController {
                         nuevoEstado = 'entregado';
                         break;
                     case 'entregado':
-                        nuevoEstado = 'cuenta_pedida'; // <-- ¡AHORA SÍ PERMITIMOS AVANZAR A LA CUENTA!
-                        break;
-                    case 'cuenta_pedida':
-                        if (isAdminUser) {
-                            nuevoEstado = 'pagado';
-                            break;
-                        }
-                        return res.status(400).json({ message: "La cuenta ya fue solicitada para este pedido" });
+                        return res.status(400).json({ message: "La solicitud de cuenta se maneja a nivel de mesa, no por pedido individual" });
                     case 'pagado':
                         return res.status(400).json({ message: "El pedido ya está pagado" });
                     default:
@@ -295,12 +288,9 @@ class PedidosController {
                     case 'entregado':
                         nuevoEstado = 'en_preparacion';
                         break;
-                    case 'cuenta_pedida':
-                        nuevoEstado = 'entregado'; // <-- POR SI EL MOZO COLO REBOTA LA CUENTA POR ERROR
-                        break;
                     case 'pagado':
                         if (isAdminUser) {
-                            nuevoEstado = 'cuenta_pedida';
+                            nuevoEstado = 'entregado';
                             break;
                         }
                         return res.status(400).json({ message: "No tienes permiso para modificar este pedido" });

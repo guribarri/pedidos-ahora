@@ -12,6 +12,7 @@ const PedidosConfirmados = ({ onLogout }) => {
   const [updatingId, setUpdatingId] = useState(null);
   const { usuario } = useUserContext();
   const [mesasCerradas, setMesasCerradas] = useState([]);
+  const [sessionFlags, setSessionFlags] = useState({});
 
   const getEstadoColor = (estado) => {
     switch (estado) {
@@ -57,6 +58,18 @@ const PedidosConfirmados = ({ onLogout }) => {
             return new Date(b.fecha) - new Date(a.fecha);
           });
           setPedidos(sortedData);
+          // Obtener información de sesiones únicas
+          const uniqueSesionIds = Array.from(new Set(sortedData.map(d => d.sesion_mesa_id).filter(Boolean)));
+          const flags = {};
+          await Promise.all(uniqueSesionIds.map(async (sid) => {
+            try {
+              const ses = await PedidoService.getSession(sid);
+              flags[sid] = ses;
+            } catch (e) {
+              // ignore per-session fetch errors
+            }
+          }));
+          setSessionFlags(flags);
           setError(null);
         }
       } catch (err) {
@@ -207,9 +220,9 @@ const PedidosConfirmados = ({ onLogout }) => {
                   )}
                 </div>
                 {(() => {
-                  const tieneCuentaPedida = pedidosDeMesa.some(p => p.estado === 'cuenta_pedida');
-                  const todosPagados = pedidosDeMesa.every(p => p.estado === 'pagado');
-                  const sePuedeCerrar = tieneCuentaPedida || todosPagados;
+                  const sesionId = pedidosDeMesa[0]?.sesion_mesa_id;
+                  const tieneCuentaPedida = sesionId ? !!sessionFlags[sesionId]?.cuenta_solicitada : false;
+                  const sePuedeCerrar = tieneCuentaPedida; // Sólo permitir cerrar si la sesión solicitó la cuenta
                   return mesaLabel !== 'Sin Mesa' && (
                     <button
                       onClick={() => handleCerrarMesa(mesaLabel, pedidosDeMesa)}
@@ -247,44 +260,30 @@ const PedidosConfirmados = ({ onLogout }) => {
                           {/* BOTÓN RETROCEDER (←) */}
                           <button
                             onClick={() => handleEstadoChange(pedido.id, 'backward')}
-                            disabled={pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id}
+                            disabled={pedido.estado === 'confirmado' || updatingId === pedido.id}
                             style={{
                               ...styles.navButton,
-                              opacity: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 0.5 : 1,
-                              cursor: (pedido.estado === 'confirmado' || pedido.estado === 'cuenta_pedida' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                              opacity: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 0.5 : 1,
+                              cursor: (pedido.estado === 'confirmado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
                             }}
-                            title={pedido.estado === 'cuenta_pedida' ? "No se puede retroceder un pedido con cuenta pedida" : "Retroceder estado"}
+                            title="Retroceder estado"
                           >
                             ←
                           </button>
 
                           {/* BOTÓN CERRAR PEDIDO (SI ES CUENTA PEDIDA) */}
-                          {pedido.estado === 'cuenta_pedida' && (
-                            <button
-                              onClick={() => handleEstadoChange(pedido.id, 'forward')}
-                              disabled={updatingId === pedido.id}
-                              style={styles.cerrarPedidoBtn}
-                              title="Cobrar y cerrar este pedido"
-                            >
-                              Cerrar Pedido 💵
-                            </button>
-                          )}
-
-                          {/* BOTÓN AVANZAR (→) */}
-                          {pedido.estado !== 'cuenta_pedida' && (
-                            <button
-                              onClick={() => handleEstadoChange(pedido.id, 'forward')}
-                              disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
-                              style={{
-                                ...styles.navButton,
-                                opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
-                                cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
-                              }}
-                              title="Avanzar estado"
-                            >
-                              →
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleEstadoChange(pedido.id, 'forward')}
+                            disabled={pedido.estado === 'entregado' || updatingId === pedido.id}
+                            style={{
+                              ...styles.navButton,
+                              opacity: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 0.5 : 1,
+                              cursor: (pedido.estado === 'entregado' || updatingId === pedido.id) ? 'not-allowed' : 'pointer'
+                            }}
+                            title="Avanzar estado"
+                          >
+                            →
+                          </button>
                         </div>
                       )}
 

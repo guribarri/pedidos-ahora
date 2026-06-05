@@ -156,6 +156,34 @@ const cerrarMesa = async (numeroMesa) => {
     }
 };
 
+const solicitarCuenta = async (sesionId) => {
+    try {
+        const response = await axios.post(`${baseURL}sesiones/${sesionId}/pedir_cuenta`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al solicitar cuenta:', error);
+        const serverMsg = error?.response?.data?.message;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Error al solicitar la cuenta');
+    }
+};
+
+const getSession = async (sesionId) => {
+    try {
+        const headers = { ...getTableHeaders() };
+        const email = getUserEmail();
+        if (email) headers['x-user-email'] = email;
+
+        const response = await axios.get(`${baseURL}sesiones/${sesionId}`, { headers });
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener sesión:', error);
+        const serverMsg = error?.response?.data?.message;
+        if (serverMsg) throw Error(serverMsg);
+        throw Error('Error al obtener la sesión');
+    }
+};
+
 const getPedidosBySession = async (sesionMesaId) => {
     try {
         const headers = { ...getTableHeaders() };
@@ -173,4 +201,4 @@ const getPedidosBySession = async (sesionMesaId) => {
     }
 };
 
-export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa, cerrarMesa, getPedidosBySession };
+export default { createPedido, addMenusToPedido, getPedidoById, getUserPedidos, getAllPedidos, updatePedidoEstado, accederMesa, cerrarMesa, getPedidosBySession, solicitarCuenta, getSession };

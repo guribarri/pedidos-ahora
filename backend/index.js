@@ -54,6 +54,12 @@ app.post("/mesas/:numero/cerrar", isAdmin, mesasController.cerrarMesa.bind(mesas
 // GET todas las mesas (solo admin)
 app.get("/mesas", isAdmin, mesasController.getAllMesas.bind(mesasController));
 
+// Sesiones Routes
+// POST solicitar cuenta para una sesión (público)
+app.post('/sesiones/:id/pedir_cuenta', mesasController.solicitarCuenta.bind(mesasController));
+// GET obtener sesión por id (incluye cuenta_solicitada) - público
+app.get('/sesiones/:id', mesasController.getSession.bind(mesasController));
+
 //POST crear pedido (público)
 app.post("/pedidos", pedidosController.create.bind(pedidosController));
 // GET pedidos del usuario actual
